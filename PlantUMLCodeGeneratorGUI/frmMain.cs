@@ -24,7 +24,7 @@ namespace PlantUMLCodeGeneratorGUI
             using (var fbd = new FolderBrowserDialog())
             {
                 fbd.SelectedPath = _lastVisitedDirectory ?? Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-                fbd.SelectedPath = @"D:\documents\marketdata\include\dissemination";
+                fbd.SelectedPath = @"D:\documents\marketdata\include";
                 fbd.Description = "Please select the folder which contains the header files";
 
                 if (fbd.ShowDialog() == DialogResult.OK && (lstFolderList.Items.Cast<string>().Any(i => i == fbd.SelectedPath) == false))
@@ -65,6 +65,7 @@ namespace PlantUMLCodeGeneratorGUI
                 var completeContent = "";
                 foreach (var file in headerFiles)
                 {
+                    frmLoadingDialog.UpdateProgressText("Processing File : " + file);
                     completeContent += Environment.NewLine + File.ReadAllText(file);
                 }
 

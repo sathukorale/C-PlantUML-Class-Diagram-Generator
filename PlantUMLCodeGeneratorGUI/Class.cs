@@ -68,6 +68,7 @@ namespace PlantUMLCodeGeneratorGUI
 
         public void Set(string namespaceContent)
         {
+            frmLoadingDialog.UpdateProgressText("Processing Class : " + FullName);
             var remainingContent = "";
 
             var matches = RegExs.namespaceMatch.Matches(namespaceContent);
@@ -331,6 +332,7 @@ namespace PlantUMLCodeGeneratorGUI
 
         public void Set(string classContent)
         {
+            frmLoadingDialog.UpdateProgressText("Processing Class : " + ParentNamespace.FullName + Name);
             var scopes = new [] { PublicScope, PrivateScope, ProtectedScope };
             var segments = GetScopedSegments(classContent, scopes);
 
@@ -354,6 +356,9 @@ namespace PlantUMLCodeGeneratorGUI
             {
                 var scopeContent = "";
                 if (scopeData.TryGetValue(scope.Name, out scopeContent) == false) continue;
+
+                if (scopeContent.Contains("BatchAckHandlerEvent"))
+                    Console.WriteLine();
 
                 var visitedIndex = 0;
 
@@ -439,8 +444,9 @@ namespace PlantUMLCodeGeneratorGUI
 
                             if (argument.Contains("=")) argument = argument.Substring(0, argument.IndexOf("=", StringComparison.Ordinal)).Trim();
 
-                            var argumentName = argument.Split(' ').Last();
-                            var argumentType = argument.Substring(0, argument.LastIndexOf(" ", StringComparison.Ordinal)).Trim();
+                            var hasASpace    = argument.Contains(' ');
+                            var argumentName = hasASpace ? argument.Split(' ').Last() : "";
+                            var argumentType = hasASpace ? argument.Substring(0, argument.LastIndexOf(" ", StringComparison.Ordinal)).Trim() : argument;
 
                             method.Arguments.Add(new Member { Name = argumentName, Type = argumentType, OwnerClass = this, OwnerMethod = method });
                         }
@@ -618,6 +624,8 @@ namespace PlantUMLCodeGeneratorGUI
     {
         public static void Process(String content)
         {
+            frmLoadingDialog.UpdateProgressText("Replacing macros...");
+
             var indexOfMacro = 0;
             var macroContents = new List<string>();
             while ((indexOfMacro = content.IndexOf("#define", indexOfMacro + 1, StringComparison.Ordinal)) != -1)
@@ -684,11 +692,18 @@ namespace PlantUMLCodeGeneratorGUI
 
             Macros.Process(fileContent);
             fileContent = RemoveComments(fileContent);
+            fileContent = Cleanup(fileContent);
 
             Namespace.DefaultNamespace.Set(fileContent);
 
             var stringifiedContent = Namespace.DefaultNamespace.ToString(settings);
             return stringifiedContent.ClassContent + Environment.NewLine + Environment.NewLine + stringifiedContent.ClassConnectivityContent;
+        }
+
+        private static string Cleanup(String content)
+        {
+            var regexEnumClass = new Regex("enum[ \t]+class ");
+            return regexEnumClass.Replace(content, "enum ");
         }
 
         public static string GetScopedContent(String completeContent, ref int offset, ScopeCharacterType scopeCharacterType = ScopeCharacterType.Braces)
@@ -743,6 +758,8 @@ namespace PlantUMLCodeGeneratorGUI
 
         public static string RemoveComments(string completeContent)
         {
+            frmLoadingDialog.UpdateProgressText("Cleaning-up comments...");
+
             var indexOfOneLineComment = -1;
             while ((indexOfOneLineComment = completeContent.IndexOf("//", StringComparison.Ordinal))!= -1)
             {
