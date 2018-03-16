@@ -24,7 +24,7 @@ namespace PlantUMLCodeGeneratorGUI
             using (var fbd = new FolderBrowserDialog())
             {
                 fbd.SelectedPath = _lastVisitedDirectory ?? Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-                fbd.SelectedPath = @"D:\documents\marketdata\include";
+                fbd.SelectedPath = @"D:\documents\marketdata\include\dissemination";
                 fbd.Description = "Please select the folder which contains the header files";
 
                 if (fbd.ShowDialog() == DialogResult.OK && (lstFolderList.Items.Cast<string>().Any(i => i == fbd.SelectedPath) == false))
@@ -41,9 +41,10 @@ namespace PlantUMLCodeGeneratorGUI
         {
             if (lstFolderList.Items.Count > 0)
             {
-                foreach (var selectedItem in lstFolderList.SelectedItems)
+                var selectedItems = lstFolderList.SelectedItems.OfType<object>().ToArray();
+                for (var i = 0; i < selectedItems.Length; i++)
                 {
-                    lstFolderList.Items.Remove(selectedItem);
+                    lstFolderList.Items.Remove(selectedItems[i]);
                 }
             }
 

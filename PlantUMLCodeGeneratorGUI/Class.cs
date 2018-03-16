@@ -13,6 +13,18 @@ namespace PlantUMLCodeGeneratorGUI
         public static Regex multiSpaces = new Regex("[ ]{2,}", RegexOptions.None);
     }
 
+    class StringifiedContent
+    {
+        public readonly string ClassContent;
+        public readonly string ClassConnectivityContent;
+
+        public StringifiedContent(string classContent, string classRelationshipsContent)
+        {
+            ClassContent = classContent;
+            ClassConnectivityContent = classRelationshipsContent;
+        }
+    }
+
     class Namespace
     {
         public string Name;
@@ -63,11 +75,12 @@ namespace PlantUMLCodeGeneratorGUI
 
             foreach (Match match in matches)
             {
-                if (match.Index < lastMatchOffset) continue;
+                var matchIndex = match.Index;
+                if (matchIndex < lastMatchOffset) continue;
 
                 remainingContent += namespaceContent.Substring(lastMatchOffset, match.Index - lastMatchOffset);
 
-                var innerNamespaceContent = Processor.GetScopedContent(namespaceContent, match.Index);
+                var innerNamespaceContent = Processor.GetScopedContent(namespaceContent, ref matchIndex);
                 var namespaceName = match.Groups[3].Value;
                 lastMatchOffset = match.Index + match.Length + innerNamespaceContent.Length + 1;
 
@@ -79,11 +92,30 @@ namespace PlantUMLCodeGeneratorGUI
 
             remainingContent = namespaceContent.Substring(lastMatchOffset, namespaceContent.Length - lastMatchOffset);
 
-            var classMatches = RegExs.classMatch.Matches(remainingContent);
+            remainingContent = ProcessFullContent(remainingContent);
+        }
+
+        private string ProcessFullContent(string fullContent)
+        {
+            var remainingContent = "";
+            var offset = 0;
+
+            if (fullContent.Contains("Transaction"))
+                Console.WriteLine();
+
+            var classMatches = RegExs.classMatch.Matches(fullContent);
             foreach (Match classMatch in classMatches)
             {
-                var classContent = Processor.GetScopedContent(remainingContent, classMatch.Index);
-                var classObj = Class.GetClass(this, classMatch.Groups["classname"].Value);
+                if (classMatch.Index < offset) continue;
+
+                remainingContent += fullContent.Substring(offset, classMatch.Index - offset);
+
+                var matchOffset  = classMatch.Index;
+                var classContent = Processor.GetScopedContent(fullContent, ref matchOffset);
+                var classObj     = Class.GetClass(this, classMatch.Groups["classname"].Value);
+
+                offset       = matchOffset;
+                classContent = ProcessFullContent(classContent);
 
                 classObj.Set(classContent);
 
@@ -108,39 +140,62 @@ namespace PlantUMLCodeGeneratorGUI
                     (isPrivate ? classObj.PrivateScope : (isPublic ? classObj.PublicScope : classObj.ProtectedScope)).Parents.Add(parentClassObj);
                 }
             }
+
+            remainingContent += fullContent.Substring(offset);
+            return remainingContent;
         }
 
-        public string ToString(Settings settings)
+        public StringifiedContent ToString(Settings settings)
         {
-            var content = "";
-            content += "package " + Name + " {" + Environment.NewLine;
+            var namespaceContent = "";
+            var classConnectivityContent = "";
+
+            namespaceContent += "package " + Name + " {" + Environment.NewLine;
 
             foreach (var ns in Namespaces)
             {
-                content += "\t" + (ns.Value.ToString(settings).Trim()).Replace(Environment.NewLine, Environment.NewLine + "\t").Trim();
-                content += Environment.NewLine;
-                content += Environment.NewLine;
+                var stringifiedContent = ns.Value.ToString(settings);
+
+                namespaceContent += "\t" + (stringifiedContent.ClassContent.Trim()).Replace(Environment.NewLine, Environment.NewLine + "\t").Trim();
+                namespaceContent += Environment.NewLine;
+                namespaceContent += Environment.NewLine;
+
+                if (stringifiedContent.ClassConnectivityContent.Any())
+                {
+                    classConnectivityContent += stringifiedContent.ClassConnectivityContent;
+                    classConnectivityContent += Environment.NewLine;
+                    classConnectivityContent += Environment.NewLine;
+                }
             }
 
-            content = content.Trim();
-            content += Environment.NewLine;
+            namespaceContent = namespaceContent.Trim();
+            namespaceContent += Environment.NewLine;
 
             if (Classes.Any() && Namespaces.Any())
-                content += Environment.NewLine;
+                namespaceContent += Environment.NewLine;
 
             for (int a = 0; a < Classes.Count; a++)
             {
                 var cs = Classes[Classes.Keys.ToArray()[a]];
-                content += "\t" + (cs.ToString(settings).Trim()).Replace(Environment.NewLine, Environment.NewLine + "\t").Trim();
-                content += Environment.NewLine;
-                content += Environment.NewLine;
+                var stringifiedContent = cs.ToString(settings);
+
+                namespaceContent += "\t" + (stringifiedContent.ClassContent.Trim()).Replace(Environment.NewLine, Environment.NewLine + "\t").Trim();
+                namespaceContent += Environment.NewLine;
+                namespaceContent += Environment.NewLine;
+
+                if (stringifiedContent.ClassConnectivityContent.Any())
+                {
+                    classConnectivityContent += stringifiedContent.ClassConnectivityContent;
+                    classConnectivityContent += Environment.NewLine;
+                    classConnectivityContent += Environment.NewLine;
+                }
             }
 
-            content = content.Trim();
-            content += Environment.NewLine;
-            content += "}";
+            namespaceContent = namespaceContent.Trim();
+            namespaceContent += Environment.NewLine;
+            namespaceContent += "}";
 
-            return content.Trim();
+            return new StringifiedContent(namespaceContent.Trim(), classConnectivityContent.Trim());
         }
 
         public static Namespace GetNamespace(Namespace parentNamespace, string namespaceName)
@@ -276,11 +331,6 @@ namespace PlantUMLCodeGeneratorGUI
 
         public void Set(string classContent)
         {
-            if (classContent.Contains("Parameters"))
-            {
-                Console.WriteLine();
-            }
-
             var scopes = new [] { PublicScope, PrivateScope, ProtectedScope };
             var segments = GetScopedSegments(classContent, scopes);
 
@@ -322,8 +372,9 @@ namespace PlantUMLCodeGeneratorGUI
 
                     if (nextToVisitIndex == indexOfCurlyBracket)
                     {
-                        var scopedContent = Processor.GetScopedContent(scopeContent, indexOfCurlyBracket);
-                        visitedIndex = indexOfCurlyBracket + scopedContent.Length + 2;
+                        var offset = indexOfCurlyBracket;
+                        var scopedContent = Processor.GetScopedContent(scopeContent, ref offset);
+                        visitedIndex = offset;
 
                         if (methodContent.StartsWith("struct"))
                         {
@@ -399,6 +450,8 @@ namespace PlantUMLCodeGeneratorGUI
                     else if (argEndBracket == -1 && argStartBracket == -1 && nextToVisitIndex == indexOfSemiColon) // This is a variable
                     {
                         var memberContent = methodContent.Trim();
+                        if (memberContent.Length == 0) continue;
+
                         if (memberContent.StartsWith("friend class") || memberContent.StartsWith("typedef")) continue;
 
                         memberContent = memberContent.Split('=').First().Trim();
@@ -414,15 +467,17 @@ namespace PlantUMLCodeGeneratorGUI
             IsInterface = scopes.Any(i => i.Methods.Any(ii => ii.IsPureVirtual));
         }
 
-        public string ToString(Settings settings)
+        public StringifiedContent ToString(Settings settings)
         {
             var scopes = new List<Scope> { PublicScope };
 
             if (settings.IncludeProtectedMethodsAndMembers) scopes.Add(ProtectedScope);
             if (settings.IncludePrivateMethodsAndMembers)   scopes.Add(PrivateScope);
 
-            string content = "";
-            content += (IsInterface ? "interface " : "class ") + Name + " {" + Environment.NewLine;
+            string classContent = "";
+            string classRelationshipsContent = "";
+
+            classContent += (IsInterface ? "interface " : "class ") + Name + " {" + Environment.NewLine;
 
             foreach (var scope in scopes)
             {
@@ -430,19 +485,19 @@ namespace PlantUMLCodeGeneratorGUI
 
                 foreach (var scopeMember in scope.Members)
                 {
-                    content += "\t" + prefix + scopeMember + Environment.NewLine;
+                    classContent += "\t" + prefix + scopeMember + Environment.NewLine;
                 }
 
                 foreach (var scopeMethod in scope.Methods.Where(i => (settings.IncludeOverridenMethods || i.IsOverriding == false) && i.IsOperatorOverload == false))
                 {
-                    content += "\t" + prefix + scopeMethod + Environment.NewLine;
+                    classContent += "\t" + prefix + scopeMethod + Environment.NewLine;
                 }
             }
 
-            content += "}" + Environment.NewLine;
+            classContent += "}" + Environment.NewLine;
 
             if (scopes.Any()) 
-                content += Environment.NewLine;
+                classContent += Environment.NewLine;
 
             foreach (var scope in scopes)
             {
@@ -454,14 +509,14 @@ namespace PlantUMLCodeGeneratorGUI
                         var containedParentTypes = Processor.GetContainedTypes(scopeParent.Name, this);
                         foreach (var parentType in containedParentTypes)
                         {
-                            content += Name + " ..|> " + parentType.FullName + Environment.NewLine;
+                            classRelationshipsContent += Name + " ..|> " + parentType.Name + Environment.NewLine;
                         }
 
-                        content += Name + " ..|> " + containerParentType.FullName + Environment.NewLine; 
+                        classRelationshipsContent += Name + " ..|> " + containerParentType.Name + Environment.NewLine; 
                     }
                     else
                     {
-                        content += Name + " ..|> " + scopeParent.FullName + Environment.NewLine; 
+                        classRelationshipsContent += Name + " ..|> " + scopeParent.Name + Environment.NewLine; 
                     }
                 }
 
@@ -469,18 +524,18 @@ namespace PlantUMLCodeGeneratorGUI
                 {
                     if (referredType.Any() == false) continue;
 
-                    content += Name + " \"1\" *-- \"" + referredType.Count() + "\" " + referredType.Key.FullName + Environment.NewLine;
+                    classRelationshipsContent += Name + " \"1\" *-- \"" + referredType.Count() + "\" " + referredType.Key.Name + Environment.NewLine;
                 }
 
                 foreach (var referredType in scope.Members.Select(i => i.GetContainedTypes()).SelectMany(i => i).Where(i => i != null).GroupBy(i => i))
                 {
                     if (referredType.Any() == false) continue;
 
-                    content += Name + " \"1\" -- \"" + referredType.Count() + "\" " + referredType.Key.FullName + Environment.NewLine;
+                    classRelationshipsContent += Name + " \"1\" -- \"" + referredType.Count() + "\" " + referredType.Key.Name + Environment.NewLine;
                 }
             }
 
-            return content;
+            return new StringifiedContent(classContent.Trim(), classRelationshipsContent.Trim());
         }
     }
 
@@ -632,10 +687,11 @@ namespace PlantUMLCodeGeneratorGUI
 
             Namespace.DefaultNamespace.Set(fileContent);
 
-            return Namespace.DefaultNamespace.ToString(settings);
+            var stringifiedContent = Namespace.DefaultNamespace.ToString(settings);
+            return stringifiedContent.ClassContent + Environment.NewLine + Environment.NewLine + stringifiedContent.ClassConnectivityContent;
         }
 
-        public static string GetScopedContent(String completeContent, int offset, ScopeCharacterType scopeCharacterType = ScopeCharacterType.Braces)
+        public static string GetScopedContent(String completeContent, ref int offset, ScopeCharacterType scopeCharacterType = ScopeCharacterType.Braces)
         {
             var startCharacterType = "";
             var endCharacterType = "";
@@ -657,7 +713,11 @@ namespace PlantUMLCodeGeneratorGUI
             }
 
             var methodContent = completeContent.Substring(offset);
-            methodContent = methodContent.Substring(methodContent.IndexOf(startCharacterType, StringComparison.Ordinal) + 1);
+            var indexofStartCharacterType = (methodContent.IndexOf(startCharacterType, StringComparison.Ordinal) + 1);
+
+            offset += indexofStartCharacterType;
+            methodContent = methodContent.Substring(indexofStartCharacterType);
+
             var numberOfClosingBrackets = 1;
             var indexToCheckFrom = 0;
             while (numberOfClosingBrackets > 0)
@@ -677,6 +737,7 @@ namespace PlantUMLCodeGeneratorGUI
                 }
             }
 
+            offset += (indexToCheckFrom);
             return methodContent.Substring(0, indexToCheckFrom - 1);
         }
 
