@@ -93,10 +93,9 @@ namespace PlantUMLCodeGeneratorGUI
                         File.Delete(sfd.FileName);
 
                     File.WriteAllText(sfd.FileName, generatedContent);
+                    MessageBox.Show("The PlantUML script was generated and saved successfully !", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
-
-            MessageBox.Show("The PlantUML script was generated and saved successfully !", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
     }
 }

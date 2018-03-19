@@ -760,24 +760,37 @@ namespace PlantUMLCodeGeneratorGUI
         {
             frmLoadingDialog.UpdateProgressText("Cleaning-up comments...");
 
+            var indexOfLastMatch = 0;
             var indexOfOneLineComment = -1;
-            while ((indexOfOneLineComment = completeContent.IndexOf("//", StringComparison.Ordinal))!= -1)
+            var segments = new List<string>();
+
+            while ((indexOfOneLineComment = completeContent.IndexOf("//", indexOfLastMatch, StringComparison.Ordinal))!= -1)
             {
                 var indexOfCRLF = completeContent.IndexOf("\r\n", indexOfOneLineComment, StringComparison.Ordinal);
-                var indexofLF = completeContent.IndexOf("\n", indexOfOneLineComment, StringComparison.Ordinal);
+                var indexofLF   = completeContent.IndexOf("\n", indexOfOneLineComment, StringComparison.Ordinal);
 
                 var indexOfNext = completeContent.Length;
                 if (indexofLF != -1 && indexOfCRLF != -1)
                 {
-                    indexOfNext = Math.Min(indexofLF, indexOfCRLF);
+                    indexOfNext = Math.Min(indexofLF + 1, indexOfCRLF + 2);
                 }
                 else if (indexofLF != -1 ^ indexOfCRLF - 1 == 0)
                 {
-                    indexOfNext = Math.Max(indexofLF, indexOfCRLF);
+                    indexOfNext = Math.Max(indexofLF + 1, indexOfCRLF + 2);
                 }
 
-                completeContent = completeContent.Substring(0, indexOfOneLineComment) + completeContent.Substring(indexOfNext + 1);
+                var content = completeContent.Substring(indexOfLastMatch, indexOfOneLineComment - indexOfLastMatch).Trim();
+                if (content.Length != 0) segments.Add(content);
+
+                indexOfLastMatch = indexOfNext;
             }
+
+            if (indexOfLastMatch < completeContent.Length)
+            {
+                segments.Add(completeContent.Substring(indexOfLastMatch, completeContent.Length - indexOfLastMatch - 1));
+            }
+
+            completeContent = String.Join(Environment.NewLine, segments);
 
             var indexOfMultiLineComment = -1;
             while ((indexOfMultiLineComment = completeContent.IndexOf("/*", StringComparison.Ordinal)) != -1)
@@ -789,7 +802,7 @@ namespace PlantUMLCodeGeneratorGUI
 
             return completeContent;
         }
-
+          
         public static Class GetTypeAsClass(string type, Class ownerClass)
         {
             var tmpType = type;

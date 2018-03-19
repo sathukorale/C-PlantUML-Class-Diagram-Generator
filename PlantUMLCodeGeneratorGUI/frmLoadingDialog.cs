@@ -135,6 +135,8 @@ namespace PlantUMLCodeGeneratorGUI
                     lblMessage.Text = text;
                 }
             }
+
+            Application.DoEvents();
         }
 
         public static void UpdateProgressPercentage(int value)
