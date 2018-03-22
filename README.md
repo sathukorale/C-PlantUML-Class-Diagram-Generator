@@ -1,1 +1,1 @@
-# C-PlantUML-Class-Diagram-Generator
+# C++ PlantUML Class Diagram Generator
