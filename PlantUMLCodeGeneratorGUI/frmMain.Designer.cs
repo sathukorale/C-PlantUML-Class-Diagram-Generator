@@ -56,6 +56,7 @@
             // btnAddFolder
             // 
             this.btnAddFolder.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnAddFolder.FlatStyle = System.Windows.Forms.FlatStyle.System;
             this.btnAddFolder.Location = new System.Drawing.Point(240, 14);
             this.btnAddFolder.Name = "btnAddFolder";
             this.btnAddFolder.Size = new System.Drawing.Size(87, 27);
@@ -68,6 +69,7 @@
             // 
             this.btnRemoveFolder.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.btnRemoveFolder.Enabled = false;
+            this.btnRemoveFolder.FlatStyle = System.Windows.Forms.FlatStyle.System;
             this.btnRemoveFolder.Location = new System.Drawing.Point(240, 47);
             this.btnRemoveFolder.Name = "btnRemoveFolder";
             this.btnRemoveFolder.Size = new System.Drawing.Size(87, 27);
@@ -80,6 +82,7 @@
             // 
             this.btnGenerate.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.btnGenerate.Enabled = false;
+            this.btnGenerate.FlatStyle = System.Windows.Forms.FlatStyle.System;
             this.btnGenerate.Location = new System.Drawing.Point(240, 232);
             this.btnGenerate.Name = "btnGenerate";
             this.btnGenerate.Size = new System.Drawing.Size(87, 27);
@@ -107,7 +110,7 @@
             this.chkShowProtectedMembers.AutoSize = true;
             this.chkShowProtectedMembers.Location = new System.Drawing.Point(7, 75);
             this.chkShowProtectedMembers.Name = "chkShowProtectedMembers";
-            this.chkShowProtectedMembers.Size = new System.Drawing.Size(235, 19);
+            this.chkShowProtectedMembers.Size = new System.Drawing.Size(228, 19);
             this.chkShowProtectedMembers.TabIndex = 0;
             this.chkShowProtectedMembers.Text = "Include Protected Members && Methods";
             this.chkShowProtectedMembers.UseVisualStyleBackColor = true;
@@ -117,7 +120,7 @@
             this.chkShowPrivateMembers.AutoSize = true;
             this.chkShowPrivateMembers.Location = new System.Drawing.Point(7, 48);
             this.chkShowPrivateMembers.Name = "chkShowPrivateMembers";
-            this.chkShowPrivateMembers.Size = new System.Drawing.Size(220, 19);
+            this.chkShowPrivateMembers.Size = new System.Drawing.Size(214, 19);
             this.chkShowPrivateMembers.TabIndex = 0;
             this.chkShowPrivateMembers.Text = "Include Private Members && Methods";
             this.chkShowPrivateMembers.UseVisualStyleBackColor = true;
@@ -127,7 +130,7 @@
             this.chkShowOverriddenMembers.AutoSize = true;
             this.chkShowOverriddenMembers.Location = new System.Drawing.Point(7, 22);
             this.chkShowOverriddenMembers.Name = "chkShowOverriddenMembers";
-            this.chkShowOverriddenMembers.Size = new System.Drawing.Size(170, 19);
+            this.chkShowOverriddenMembers.Size = new System.Drawing.Size(168, 19);
             this.chkShowOverriddenMembers.TabIndex = 0;
             this.chkShowOverriddenMembers.Text = "Include Overriden Methods";
             this.chkShowOverriddenMembers.UseVisualStyleBackColor = true;
@@ -142,7 +145,7 @@
             this.Controls.Add(this.btnRemoveFolder);
             this.Controls.Add(this.btnAddFolder);
             this.Controls.Add(this.lstFolderList);
-            this.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.Font = new System.Drawing.Font("Segoe UI Semilight", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.MaximizeBox = false;
             this.MinimizeBox = false;

@@ -101,9 +101,6 @@ namespace PlantUMLCodeGeneratorGUI
             var remainingContent = "";
             var offset = 0;
 
-            if (fullContent.Contains("Transaction"))
-                Console.WriteLine();
-
             var classMatches = RegExs.classMatch.Matches(fullContent);
             foreach (Match classMatch in classMatches)
             {
@@ -263,10 +260,6 @@ namespace PlantUMLCodeGeneratorGUI
 
         public static Class GetClass(Namespace namespaceObj, string className, bool justCheck = false)
         {
-            if (className == "loaderLoader")
-            {
-                Console.WriteLine();
-            }
             Class foundClass = null;
             if (namespaceObj.Classes.TryGetValue(className, out foundClass) == false)
             {
@@ -333,6 +326,7 @@ namespace PlantUMLCodeGeneratorGUI
         public void Set(string classContent)
         {
             frmLoadingDialog.UpdateProgressText("Processing Class : " + ParentNamespace.FullName + Name);
+
             var scopes = new [] { PublicScope, PrivateScope, ProtectedScope };
             var segments = GetScopedSegments(classContent, scopes);
 
@@ -356,10 +350,7 @@ namespace PlantUMLCodeGeneratorGUI
             {
                 var scopeContent = "";
                 if (scopeData.TryGetValue(scope.Name, out scopeContent) == false) continue;
-
-                if (scopeContent.Contains("BatchAckHandlerEvent"))
-                    Console.WriteLine();
-
+                
                 var visitedIndex = 0;
 
                 while (visitedIndex < scopeContent.Length - 1)
@@ -455,17 +446,21 @@ namespace PlantUMLCodeGeneratorGUI
                     }
                     else if (argEndBracket == -1 && argStartBracket == -1 && nextToVisitIndex == indexOfSemiColon) // This is a variable
                     {
-                        var memberContent = methodContent.Trim();
-                        if (memberContent.Length == 0) continue;
+                        try
+                        {
+                            var memberContent = methodContent.Trim();
+                            if (memberContent.Length == 0) continue;
 
-                        if (memberContent.StartsWith("friend class") || memberContent.StartsWith("typedef")) continue;
+                            if (memberContent.StartsWith("friend class") || memberContent.StartsWith("typedef")) continue;
 
-                        memberContent = memberContent.Split('=').First().Trim();
-                        var indexOfLastSpace = memberContent.LastIndexOf(" ", StringComparison.Ordinal);
-                        var memberType = memberContent.Substring(0, indexOfLastSpace).Trim();
-                        var memberName = memberContent.Substring(indexOfLastSpace + 1).Trim();
+                            memberContent = memberContent.Split('=').First().Trim();
+                            var indexOfLastSpace = memberContent.LastIndexOf(" ", StringComparison.Ordinal);
+                            var memberType = memberContent.Substring(0, indexOfLastSpace).Trim();
+                            var memberName = memberContent.Substring(indexOfLastSpace + 1).Trim();
 
-                        scope.Members.Add(new Member { Name = memberName, Type = memberType, OwnerClass = this });
+                            scope.Members.Add(new Member { Name = memberName, Type = memberType, OwnerClass = this });
+                        }
+                        catch { }
                     }
                 }
             }
@@ -543,6 +538,10 @@ namespace PlantUMLCodeGeneratorGUI
 
             return new StringifiedContent(classContent.Trim(), classRelationshipsContent.Trim());
         }
+    }
+
+    class Enum
+    {
     }
 
     class Scope
@@ -787,7 +786,11 @@ namespace PlantUMLCodeGeneratorGUI
 
             if (indexOfLastMatch < completeContent.Length)
             {
-                segments.Add(completeContent.Substring(indexOfLastMatch, completeContent.Length - indexOfLastMatch - 1));
+                var length = completeContent.Length - indexOfLastMatch;
+                if (length + indexOfLastMatch + 1 < completeContent.Length)
+                    length -= 1;
+
+                segments.Add(completeContent.Substring(indexOfLastMatch, length));
             }
 
             completeContent = String.Join(Environment.NewLine, segments);
@@ -824,10 +827,7 @@ namespace PlantUMLCodeGeneratorGUI
         {
             var indexOfOpeningAngledBrakcet = type.IndexOf("<", StringComparison.Ordinal);
             var indexOfClosingAngledBracket = type.LastIndexOf(">", StringComparison.Ordinal);
-
-            if (type.Contains("BaseFactory"))
-                Console.WriteLine();
-
+            
             if (indexOfOpeningAngledBrakcet == -1 || indexOfClosingAngledBracket == -1)
             {
                 return new List<Class>();
