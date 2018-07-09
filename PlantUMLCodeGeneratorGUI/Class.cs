@@ -8,9 +8,10 @@ namespace PlantUMLCodeGeneratorGUI
     static class RegExs
     { 
         public static Regex namespaceMatch = new Regex(@"(namespace)([ \t]+)([a-zA-Z0-9_:]+)([ \t\r\n]*{)");
-        public static Regex classMatch = new Regex(@"([ \t]*)((class|struct)[ \t]+)([A-Z_0-9]+[ \t]+)?(?<classname>[a-zA-Z0-9_]+)(?<parentstr>([ \t]*:[ \t]*(((public|private|protected)[ \t]+)?(([a-zA-Z0-9_]+::[a-zA-Z0-9_<>]+)+|([a-zA-Z0-9_<>]+))))([ \t\r\n]*,[ \t\r\n]*((public|private|protected)[ \t]+)*(([a-zA-Z0-9_]+::[a-zA-Z0-9_]+)+|([a-zA-Z0-9_<>]+)))*|)([ \t\r\n]*[{])");
+        public static Regex classMatch = new Regex(@"([ \t]*)((class|struct)[ \t]+)([A-Z_0-9]+[ \t]+)?([a-zA-Z0-9_]+)(([ \t\r\n]*{)|([ \t]+:[ \t]*[a-zA-Z0-9_,<>: ]+([ \t\r\n]*{)))");
         public static Regex methodMatch = new Regex(@"(([ \t]+)([a-zA-Z0-9_:,<>\*]+))+([ \t]*\()((([ \t]*)(([a-zA-Z0-9_:]+[&*]?[ \t]+[a-zA-Z0-9_]+)(,[ \t]*[a-zA-Z0-9_:]+[&*]?[ \t]+[a-zA-Z0-9_]+))|)(\)[ \t\r\n]*([{;=]|override|const)))");
         public static Regex multiSpaces = new Regex("[ ]{2,}", RegexOptions.None);
+        public static Regex templateTypes = new Regex(@"(<)([a-zA-Z0-9_: ,]+)(>)");
     }
 
     class StringifiedContent
@@ -110,19 +111,19 @@ namespace PlantUMLCodeGeneratorGUI
 
                 var matchOffset  = classMatch.Index;
                 var classContent = Processor.GetScopedContent(fullContent, ref matchOffset);
-                var classObj     = Class.GetClass(this, classMatch.Groups["classname"].Value);
+                var classObj     = Class.GetClass(this, classMatch.Groups[5].Value);
 
                 offset       = matchOffset;
                 classContent = ProcessFullContent(classContent);
 
                 classObj.Set(classContent);
 
-                var parentStr = classMatch.Groups["parentstr"].Value;
+                var parentStr = classMatch.Groups[8].Value;
                 if (string.IsNullOrEmpty(parentStr)) continue;
 
-                parentStr = parentStr.Replace("::", "[--]").Replace(":", "").Replace("[--]", "::").Trim();
+                parentStr = parentStr.Replace("::", "[--]").Replace(":", "").Replace("[--]", "::").Replace("{", "").Trim();
 
-                var parentNames = parentStr.Trim().Split(',');
+                var parentNames = GetParents(parentStr);
                 foreach (var parent in parentNames)
                 {
                     bool isPrivate = false;
@@ -141,6 +142,27 @@ namespace PlantUMLCodeGeneratorGUI
 
             remainingContent += fullContent.Substring(offset);
             return remainingContent;
+        }
+
+        private string[] GetParents(string parentString)
+        {
+            var modifiedParentString = "";
+            var lastVisitedIndex = 0;
+            var matches = RegExs.templateTypes.Matches(parentString).OfType<Match>().ToArray();
+
+            foreach (var match in matches)
+            {
+                modifiedParentString += parentString.Substring(lastVisitedIndex, match.Index);
+                modifiedParentString += match.Value.Replace(",", "[COMMA]");
+                lastVisitedIndex = (match.Index + match.Length);
+            }
+
+            if (lastVisitedIndex < parentString.Length - 1)
+            {
+                modifiedParentString += parentString.Substring(lastVisitedIndex, parentString.Length - lastVisitedIndex);
+            }
+
+            return modifiedParentString.Split(',').Select(i => i.Trim().Replace("[COMMA]", ", ")).ToArray();
         }
 
         public StringifiedContent ToString(Settings settings)
@@ -283,8 +305,20 @@ namespace PlantUMLCodeGeneratorGUI
 
         public static Class GetClass(string fullName, bool justCheck = false)
         {
-            var namespaceName = fullName.Substring(0, fullName.LastIndexOf("::", StringComparison.Ordinal));
-            var className = fullName.Substring(fullName.LastIndexOf("::", StringComparison.Ordinal) + 2);
+            var namespaceName = "";
+            var className = "";
+
+            if (fullName.Contains("<"))
+            {
+                var index = fullName.Substring(0, fullName.LastIndexOf("<", StringComparison.Ordinal)).LastIndexOf("::", StringComparison.Ordinal);
+                namespaceName = fullName.Substring(0, index);
+                className = fullName.Substring(index + 2);
+            }
+            else
+            {
+                namespaceName = fullName.Substring(0, fullName.LastIndexOf("::", StringComparison.Ordinal));
+                className = fullName.Substring(fullName.LastIndexOf("::", StringComparison.Ordinal) + 2);
+            }
 
             return GetClass(namespaceName, className, justCheck);
         }
@@ -675,9 +709,8 @@ namespace PlantUMLCodeGeneratorGUI
         }
     }
 
-    static class Processor
+    internal static class Processor
     {
-
         public enum ScopeCharacterType
         {
             Parentheses = '(',
@@ -685,7 +718,7 @@ namespace PlantUMLCodeGeneratorGUI
             Braces = '{'
         }
 
-        public static string Process(String fileContent, Settings settings)
+        public static string Process(string fileContent, Settings settings, out Namespace defaultNamespace)
         {
             Namespace.ResetDefaultNamespace();
 
@@ -696,6 +729,9 @@ namespace PlantUMLCodeGeneratorGUI
             Namespace.DefaultNamespace.Set(fileContent);
 
             var stringifiedContent = Namespace.DefaultNamespace.ToString(settings);
+
+            defaultNamespace = Namespace.DefaultNamespace;
+
             return stringifiedContent.ClassContent + Environment.NewLine + Environment.NewLine + stringifiedContent.ClassConnectivityContent;
         }
 
