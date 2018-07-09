@@ -69,7 +69,8 @@ namespace PlantUMLCodeGeneratorGUI
                     completeContent += Environment.NewLine + File.ReadAllText(file);
                 }
 
-                var output = Processor.Process(completeContent, new Settings(chkShowOverriddenMembers.Checked, chkShowPrivateMembers.Checked, chkShowProtectedMembers.Checked));
+                Namespace defaultNamespace;
+                var output = Processor.Process(completeContent, new Settings(chkShowOverriddenMembers.Checked, chkShowPrivateMembers.Checked, chkShowProtectedMembers.Checked), out defaultNamespace);
 
                 var content = "";
                 content += "@startuml" + Environment.NewLine;
