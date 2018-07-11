@@ -172,9 +172,11 @@ namespace PlantUMLCodeGeneratorGUI
 
             namespaceContent += "package " + Name + " {" + Environment.NewLine;
 
-            foreach (var ns in Namespaces)
+            var keys = Namespaces.Keys.ToArray();
+            foreach (var key in keys)
             {
-                var stringifiedContent = ns.Value.ToString(settings);
+                var ns = Namespaces[key];
+                var stringifiedContent = ns.ToString(settings);
 
                 namespaceContent += "\t" + (stringifiedContent.ClassContent.Trim()).Replace(Environment.NewLine, Environment.NewLine + "\t").Trim();
                 namespaceContent += Environment.NewLine;
@@ -842,7 +844,7 @@ namespace PlantUMLCodeGeneratorGUI
             return completeContent;
         }
           
-        public static Class GetTypeAsClass(string type, Class ownerClass)
+        public static Class GetTypeAsClass(string type, Class ownerClass, bool justCheck = true)
         {
             var tmpType = type;
             if (tmpType.Contains("<") && tmpType.Contains(">"))
@@ -853,10 +855,10 @@ namespace PlantUMLCodeGeneratorGUI
             tmpType = tmpType.Replace("*", "").Replace("&", "").Replace("const ", "");
             if (tmpType.Contains("::"))
             {
-                return Class.GetClass(tmpType, true);
+                return Class.GetClass(tmpType, justCheck);
             }
 
-            return Class.GetClass(ownerClass.ParentNamespace, tmpType, true) ?? Class.GetClass(Namespace.DefaultNamespace, tmpType, true);
+            return Class.GetClass(ownerClass.ParentNamespace, tmpType, justCheck) ?? Class.GetClass(Namespace.DefaultNamespace, tmpType, justCheck);
         }
 
         public static List<Class> GetContainedTypes(string type, Class ownerClass)
@@ -885,7 +887,7 @@ namespace PlantUMLCodeGeneratorGUI
                     currentType = containedTypeStr.Substring(0, indexOfAngleBracket);
                 }
 
-                var foundType = GetTypeAsClass(currentType, ownerClass);
+                var foundType = GetTypeAsClass(currentType, ownerClass, false);
                 if (foundType != null)
                 {
                     containedTypes.Add(foundType);
