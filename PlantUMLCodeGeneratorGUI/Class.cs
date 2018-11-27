@@ -317,8 +317,9 @@ namespace PlantUMLCodeGeneratorGUI
             {
                 var lastIndexOfColons = fullName.LastIndexOf("::", StringComparison.Ordinal);
                 var lastIndexOfTemplateStart = fullName.LastIndexOf("<", StringComparison.Ordinal);
+                var lastIndexOfTemplateEnd = fullName.LastIndexOf(">", StringComparison.Ordinal);
 
-                if (lastIndexOfColons < lastIndexOfTemplateStart)
+                if (lastIndexOfColons < lastIndexOfTemplateEnd)
                 {
                     var index = fullName.Substring(0, lastIndexOfTemplateStart).LastIndexOf("::", StringComparison.Ordinal);
 
