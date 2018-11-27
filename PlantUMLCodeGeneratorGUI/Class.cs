@@ -116,7 +116,7 @@ namespace PlantUMLCodeGeneratorGUI
                 offset       = matchOffset;
                 classContent = ProcessFullContent(classContent);
 
-                classObj.Set(classContent);
+                if (string.IsNullOrWhiteSpace(classContent) == false) classObj.Set(classContent);
 
                 var parentStr = classMatch.Groups[8].Value;
                 if (string.IsNullOrEmpty(parentStr)) continue;
@@ -315,9 +315,21 @@ namespace PlantUMLCodeGeneratorGUI
 
             if (fullName.Contains("<"))
             {
-                var index = fullName.Substring(0, fullName.LastIndexOf("<", StringComparison.Ordinal)).LastIndexOf("::", StringComparison.Ordinal);
-                namespaceName = fullName.Substring(0, index);
-                className = fullName.Substring(index + 2);
+                var lastIndexOfColons = fullName.LastIndexOf("::", StringComparison.Ordinal);
+                var lastIndexOfTemplateStart = fullName.LastIndexOf("<", StringComparison.Ordinal);
+
+                if (lastIndexOfColons < lastIndexOfTemplateStart)
+                {
+                    var index = fullName.Substring(0, lastIndexOfTemplateStart).LastIndexOf("::", StringComparison.Ordinal);
+
+                    namespaceName = fullName.Substring(0, index);
+                    className = fullName.Substring(index + 2);
+                }
+                else
+                {
+                    namespaceName = fullName.Substring(0, lastIndexOfColons);
+                    className = fullName.Substring(lastIndexOfColons + 2);
+                }
             }
             else
             {
