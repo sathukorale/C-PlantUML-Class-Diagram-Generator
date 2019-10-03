@@ -409,6 +409,7 @@ namespace PlantUMLCodeGeneratorGUI
                 {
                     var indexOfCurlyBracket = scopeContent.IndexOf("{", visitedIndex + 1, StringComparison.Ordinal);
                     var indexOfSemiColon = scopeContent.IndexOf(";", visitedIndex + 1, StringComparison.Ordinal);
+                    var indexOfAssignment = scopeContent.IndexOf("=", visitedIndex + 1, StringComparison.Ordinal);
 
                     var orderedIndices = new[] {indexOfSemiColon, indexOfCurlyBracket}.Where(i => i != -1).ToArray();
                     if (orderedIndices.Any() == false) break;
@@ -496,23 +497,47 @@ namespace PlantUMLCodeGeneratorGUI
 
                         scope.Methods.Add(method);
                     }
-                    else if (argEndBracket == -1 && argStartBracket == -1 && nextToVisitIndex == indexOfSemiColon) // This is a variable
+                    else if (argEndBracket == -1 && argStartBracket == -1) // This might be a variable
                     {
-                        try
+                        if (indexOfAssignment != -1) // Most likely someone is initializing this variable.
+                            nextToVisitIndex = indexOfSemiColon;
+
+                        if (nextToVisitIndex == indexOfSemiColon) // This is definitely a variable
                         {
-                            var memberContent = methodContent.Trim();
-                            if (memberContent.Length == 0) continue;
+                            try
+                            {
+                                var memberContent = methodContent.Trim();
+                                if (memberContent.Length == 0) continue;
 
-                            if (memberContent.StartsWith("friend class") || memberContent.StartsWith("typedef")) continue;
+                                if (memberContent.StartsWith("friend class") || memberContent.StartsWith("typedef")) continue;
 
-                            memberContent = memberContent.Split('=').First().Trim();
-                            var indexOfLastSpace = memberContent.LastIndexOf(" ", StringComparison.Ordinal);
-                            var memberType = memberContent.Substring(0, indexOfLastSpace).Trim();
-                            var memberName = memberContent.Substring(indexOfLastSpace + 1).Trim();
+                                memberContent = memberContent.Split('=').First().Trim();
+                                var indexOfLastSpace = memberContent.LastIndexOf(" ", StringComparison.Ordinal);
+                                var memberType = memberContent.Substring(0, indexOfLastSpace).Trim();
+                                var memberName = memberContent.Substring(indexOfLastSpace + 1).Trim();
 
-                            scope.Members.Add(new Member { Name = memberName, Type = memberType, OwnerClass = this });
+                                var regexArray = new Regex("(\\[\\d+\\])+$");
+                                var match = regexArray.Match(memberName);
+
+                                if (match.Success)
+                                {
+                                    memberName = memberName.Substring(0, match.Index).Trim();
+
+                                    var regexArraySegment = new Regex("\\][ \t]*\\[");
+                                    var arrayLengths = regexArraySegment.Replace(match.Value, ";").Replace("[", "").Replace("]", "").Split(';').Select(i => int.Parse(i.Trim())).ToArray();
+
+                                    scope.Members.Add(new ArrayMember { Name = memberName, Type = memberType, OwnerClass = this, ArrayLengths = arrayLengths });
+                                }
+                                else
+                                {
+                                    scope.Members.Add(new Member { Name = memberName, Type = memberType, OwnerClass = this });
+                                }
+
+                                nextToVisitIndex = indexOfSemiColon;
+                                if (indexOfAssignment != -1) visitedIndex = nextToVisitIndex + 1;
+                            }
+                            catch { }
                         }
-                        catch { }
                     }
                 }
             }
@@ -638,6 +663,11 @@ namespace PlantUMLCodeGeneratorGUI
         {
             return _containedTypes ?? (_containedTypes = Processor.GetContainedTypes(Type, OwnerClass).ToArray());
         }
+    }
+
+    class ArrayMember : Member
+    {
+        public int[] ArrayLengths { get; internal set; }
     }
 
     class Method

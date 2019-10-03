@@ -119,7 +119,7 @@ namespace PlantUMLCodeGeneratorGUI
 
         }
 
-        private void UpdatText(string text)
+        private void UpatedText(string text)
         {
             if (string.IsNullOrWhiteSpace(text) == false)
             {
@@ -160,11 +160,11 @@ namespace PlantUMLCodeGeneratorGUI
             {
                 if (_presentedDialog.InvokeRequired)
                 {
-                    _presentedDialog.BeginInvoke(new Action<object>(objectPassed => _presentedDialog.UpdatText((string)objectPassed)), text);
+                    _presentedDialog.BeginInvoke(new Action<object>(objectPassed => _presentedDialog.UpatedText((string)objectPassed)), text);
                 }
                 else
                 {
-                    _presentedDialog.UpdatText(text);
+                    _presentedDialog.UpatedText(text);
                 }
             }
         }
