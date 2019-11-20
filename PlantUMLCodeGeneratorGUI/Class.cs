@@ -5,6 +5,15 @@ using System.Text.RegularExpressions;
 
 namespace PlantUMLCodeGeneratorGUI
 {
+    internal class KnownBugCapturedException : Exception
+    {
+        public readonly int BugId;
+        public KnownBugCapturedException(int bugId, string explanation = "") : base(explanation)
+        {
+            BugId = bugId;
+        }
+    }
+
     static class RegExs
     { 
         public static Regex namespaceMatch = new Regex(@"(namespace)([ \t]+)([a-zA-Z0-9_:]+)([ \t\r\n]*{)");
@@ -850,7 +859,7 @@ namespace PlantUMLCodeGeneratorGUI
                 }
 
                 if (indexToCheckFrom < tmpIndexToCheckFrom)
-                    throw new InvalidOperationException("TODO");
+                    throw new KnownBugCapturedException(3, "If a detected scope hasn't been properly closed (reason yet to be determined) it can cause the logic to fail. In theory the code shouldn't compile.");
             }
 
             offset += (indexToCheckFrom);
@@ -927,18 +936,18 @@ namespace PlantUMLCodeGeneratorGUI
 
         public static List<Class> GetContainedTypes(string type, Class ownerClass)
         {
-            var indexOfOpeningAngledBrakcet = type.IndexOf("<", StringComparison.Ordinal);
+            var indexOfOpeningAngledBracket = type.IndexOf("<", StringComparison.Ordinal);
             var indexOfClosingAngledBracket = type.LastIndexOf(">", StringComparison.Ordinal);
             
-            if (indexOfOpeningAngledBrakcet == -1 || indexOfClosingAngledBracket == -1)
+            if (indexOfOpeningAngledBracket == -1 || indexOfClosingAngledBracket == -1)
             {
                 return new List<Class>();
             }
 
             var containedTypes = new List<Class>();
             var containedTypesStr = type;
-            containedTypesStr = containedTypesStr.Substring(indexOfOpeningAngledBrakcet + 1);
-            containedTypesStr = containedTypesStr.Substring(0, indexOfClosingAngledBracket - indexOfOpeningAngledBrakcet - 1);
+            containedTypesStr = containedTypesStr.Substring(indexOfOpeningAngledBracket + 1);
+            containedTypesStr = containedTypesStr.Substring(0, indexOfClosingAngledBracket - indexOfOpeningAngledBracket - 1);
 
             var containedTypeStrings = containedTypesStr.Split(',').Select(i => i.Trim());
             foreach (var containedTypeStr in containedTypeStrings)
