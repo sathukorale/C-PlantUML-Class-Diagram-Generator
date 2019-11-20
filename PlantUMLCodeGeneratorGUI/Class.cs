@@ -135,7 +135,20 @@ namespace PlantUMLCodeGeneratorGUI
 
                     var parentName = parent.Replace("private", "").Replace("public", "").Replace("protected", "").Trim().Replace(" ", "").Replace("\t", "");
 
-                    var parentClassObj = parentName.Contains("::") ? Class.GetClass(parentName) : Class.GetClass(this, parentName);
+                    var indexOfColon = parentName.IndexOf("::", StringComparison.Ordinal);
+                    var indexOfTemplateStart = parentName.IndexOf("<", StringComparison.Ordinal);
+
+                    // Checking whether this is a situation similar to 'namespace::ClassName<OtherClassName>'
+                    // and not this 'ClassName<namespace::OtherClassName>' and shortening this logic would
+                    // drastically reduce readability
+                    var hasNamespace = false;
+                    if (indexOfColon != -1)
+                        if (indexOfTemplateStart != -1)
+                            hasNamespace = (indexOfColon < indexOfTemplateStart);
+                        else
+                            hasNamespace = true;
+
+                    var parentClassObj = hasNamespace ? Class.GetClass(parentName) : Class.GetClass(this, parentName);
                     (isPrivate ? classObj.PrivateScope : (isPublic ? classObj.PublicScope : classObj.ProtectedScope)).Parents.Add(parentClassObj);
                 }
             }
@@ -297,16 +310,17 @@ namespace PlantUMLCodeGeneratorGUI
                         foundClass = GetClass(childNamespace, className, true);
                         if (foundClass != null) break;
                     }
-
-                    return foundClass;
                 }
-
-                foundClass = new Class(namespaceObj, className);
-                namespaceObj.Classes.Add(foundClass.Name, foundClass);
+                else
+                {
+                    foundClass = new Class(namespaceObj, className);
+                    namespaceObj.Classes.Add(foundClass.Name, foundClass);
+                }
             }
 
             return foundClass;
         }
+
 
         public static Class GetClass(string fullName, bool justCheck = false)
         {
@@ -317,19 +331,19 @@ namespace PlantUMLCodeGeneratorGUI
             {
                 var lastIndexOfColons = fullName.LastIndexOf("::", StringComparison.Ordinal);
                 var lastIndexOfTemplateStart = fullName.LastIndexOf("<", StringComparison.Ordinal);
-                var lastIndexOfTemplateEnd = fullName.LastIndexOf(">", StringComparison.Ordinal);
+                var section = fullName.Substring(0, lastIndexOfTemplateStart);
 
                 if (lastIndexOfColons < lastIndexOfTemplateStart)
                 {
-                    var index = fullName.Substring(0, lastIndexOfTemplateStart).LastIndexOf("::", StringComparison.Ordinal);
+                    var index = section.LastIndexOf("::", StringComparison.Ordinal);
 
-                    namespaceName = fullName.Substring(0, index);
-                    className = fullName.Substring(index + 2);
+                    namespaceName = section.Substring(0, index);
+                    className = section.Substring(index + 2);
                 }
                 else
                 {
-                    namespaceName = fullName.Substring(0, lastIndexOfColons);
-                    className = fullName.Substring(lastIndexOfColons + 2);
+                    namespaceName = "";
+                    className = section;
                 }
             }
             else
