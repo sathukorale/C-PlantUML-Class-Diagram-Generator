@@ -873,11 +873,12 @@ namespace PlantUMLCodeGeneratorGUI
         public static string RemoveComments(string completeContent)
         {
             frmLoadingDialog.UpdateProgressText("Cleaning-up comments...");
+            var lastIndex = 0;
 
             while (true)
             {
-                var indexOfMultiLineComment = completeContent.IndexOf("/*", StringComparison.Ordinal);
-                var indexOfOneLineComment = completeContent.IndexOf("//", StringComparison.Ordinal);
+                var indexOfMultiLineComment = completeContent.IndexOf("/*", lastIndex, StringComparison.Ordinal);
+                var indexOfOneLineComment = completeContent.IndexOf("//", lastIndex, StringComparison.Ordinal);
 
                 // Checking whether there are any more comments.
                 if (indexOfOneLineComment == -1 && indexOfMultiLineComment == -1) break;
@@ -885,7 +886,9 @@ namespace PlantUMLCodeGeneratorGUI
                 if ((indexOfMultiLineComment < indexOfOneLineComment || indexOfOneLineComment == -1) && indexOfMultiLineComment > 0)
                 {
                     var indexOfMultiLineCommentClosing = completeContent.IndexOf("*/", indexOfMultiLineComment, StringComparison.Ordinal);
+
                     completeContent = completeContent.Substring(0, indexOfMultiLineComment) + completeContent.Substring(indexOfMultiLineCommentClosing + 2);
+                    lastIndex = indexOfMultiLineComment;
                 }
                 else
                 {
@@ -903,6 +906,7 @@ namespace PlantUMLCodeGeneratorGUI
                     }
 
                     completeContent = completeContent.Substring(0, indexOfOneLineComment) + completeContent.Substring(indexOfNext);
+                    lastIndex = indexOfOneLineComment;
                 }
             }
             
