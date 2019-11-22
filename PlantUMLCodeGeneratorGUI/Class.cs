@@ -865,57 +865,47 @@ namespace PlantUMLCodeGeneratorGUI
             }
 
             offset += (indexToCheckFrom);
-            return methodContent.Substring(0, indexToCheckFrom - 1);
+            var scopeContent = methodContent.Substring(0, indexToCheckFrom - 1);
+
+            return scopeContent;
         }
 
         public static string RemoveComments(string completeContent)
         {
             frmLoadingDialog.UpdateProgressText("Cleaning-up comments...");
 
-            var indexOfLastMatch = 0;
-            var indexOfOneLineComment = -1;
-            var segments = new List<string>();
-
-            while ((indexOfOneLineComment = completeContent.IndexOf("//", indexOfLastMatch, StringComparison.Ordinal))!= -1)
+            while (true)
             {
-                var indexOfCRLF = completeContent.IndexOf("\r\n", indexOfOneLineComment, StringComparison.Ordinal);
-                var indexofLF   = completeContent.IndexOf("\n", indexOfOneLineComment, StringComparison.Ordinal);
+                var indexOfMultiLineComment = completeContent.IndexOf("/*", StringComparison.Ordinal);
+                var indexOfOneLineComment = completeContent.IndexOf("//", StringComparison.Ordinal);
 
-                var indexOfNext = completeContent.Length;
-                if (indexofLF != -1 && indexOfCRLF != -1)
+                // Checking whether there are any more comments.
+                if (indexOfOneLineComment == -1 && indexOfMultiLineComment == -1) break;
+
+                if ((indexOfMultiLineComment < indexOfOneLineComment || indexOfOneLineComment == -1) && indexOfMultiLineComment > 0)
                 {
-                    indexOfNext = Math.Min(indexofLF + 1, indexOfCRLF + 2);
+                    var indexOfMultiLineCommentClosing = completeContent.IndexOf("*/", indexOfMultiLineComment, StringComparison.Ordinal);
+                    completeContent = completeContent.Substring(0, indexOfMultiLineComment) + completeContent.Substring(indexOfMultiLineCommentClosing + 2);
                 }
-                else if (indexofLF != -1 ^ indexOfCRLF - 1 == 0)
+                else
                 {
-                    indexOfNext = Math.Max(indexofLF + 1, indexOfCRLF + 2);
+                    var indexOfCrlf = completeContent.IndexOf("\r\n", indexOfOneLineComment, StringComparison.Ordinal);
+                    var indexofLf = completeContent.IndexOf("\n", indexOfOneLineComment, StringComparison.Ordinal);
+                    var indexOfNext = completeContent.Length;
+
+                    if (indexofLf != -1 && indexOfCrlf != -1)
+                    {
+                        indexOfNext = Math.Min(indexofLf + 1, indexOfCrlf + 2);
+                    }
+                    else if (indexofLf != -1 ^ indexOfCrlf - 1 == 0)
+                    {
+                        indexOfNext = Math.Max(indexofLf + 1, indexOfCrlf + 2);
+                    }
+
+                    completeContent = completeContent.Substring(0, indexOfOneLineComment) + completeContent.Substring(indexOfNext);
                 }
-
-                var content = completeContent.Substring(indexOfLastMatch, indexOfOneLineComment - indexOfLastMatch).Trim();
-                if (content.Length != 0) segments.Add(content);
-
-                indexOfLastMatch = indexOfNext;
             }
-
-            if (indexOfLastMatch < completeContent.Length)
-            {
-                var length = completeContent.Length - indexOfLastMatch;
-                if (length + indexOfLastMatch + 1 < completeContent.Length)
-                    length -= 1;
-
-                segments.Add(completeContent.Substring(indexOfLastMatch, length));
-            }
-
-            completeContent = String.Join(Environment.NewLine, segments);
-
-            var indexOfMultiLineComment = -1;
-            while ((indexOfMultiLineComment = completeContent.IndexOf("/*", StringComparison.Ordinal)) != -1)
-            {
-                var indexOfMultiLineCommentClosing = completeContent.IndexOf("*/", indexOfMultiLineComment, StringComparison.Ordinal);
-
-                completeContent = completeContent.Substring(0, indexOfMultiLineComment) + completeContent.Substring(indexOfMultiLineCommentClosing + 2);
-            }
-
+            
             return completeContent;
         }
           
