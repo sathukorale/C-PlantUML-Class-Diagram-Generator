@@ -728,6 +728,8 @@ namespace PlantUMLCodeGeneratorGUI
     {
         public static void Process(String content)
         {
+            if (string.IsNullOrWhiteSpace(content)) return;
+
             frmLoadingDialog.UpdateProgressText("Replacing macros...");
 
             var indexOfMacro = 0;
