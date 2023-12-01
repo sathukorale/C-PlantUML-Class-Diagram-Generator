@@ -5,7 +5,7 @@ using System.Text.RegularExpressions;
 
 namespace PlantUMLCodeGeneratorGUI
 {
-    internal static class Processor
+    static class Processor
     {
         public enum ScopeCharacterType
         {

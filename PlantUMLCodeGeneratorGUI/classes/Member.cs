@@ -13,8 +13,6 @@
         public override string ToString()
         {
             return Name + " : " + Type;
-            OwnerClass = null;
-            OwnerMethod = null;
         }
 
         public Class GetTypeAsClass()

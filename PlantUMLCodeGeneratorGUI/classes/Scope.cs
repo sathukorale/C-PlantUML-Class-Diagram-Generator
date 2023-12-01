@@ -5,9 +5,10 @@ namespace PlantUMLCodeGeneratorGUI
     class Scope
     {
         public string Name;
-        public List<Class> Parents { get; set; }
-        public List<Member> Members { get; set; }
-        public List<Method> Methods { get; set; }
+        public readonly List<Class> Parents;
+        public readonly List<Member> Members;
+        public readonly List<Method> Methods;
+        public readonly List<Class> NestedClasses;
 
         public Scope(string name)
         {
@@ -15,6 +16,7 @@ namespace PlantUMLCodeGeneratorGUI
             Parents = new List<Class>();
             Members = new List<Member>();
             Methods = new List<Method>();
+            NestedClasses = new List<Class>();
         }
     }
 }

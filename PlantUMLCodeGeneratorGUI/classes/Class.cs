@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using PlantUMLCodeGeneratorGUI.classes.utils;
 
 namespace PlantUMLCodeGeneratorGUI
 {
@@ -49,7 +50,6 @@ namespace PlantUMLCodeGeneratorGUI
 
             return foundClass;
         }
-
 
         public static Class GetClass(string fullName, bool justCheck = false)
         {
@@ -115,7 +115,23 @@ namespace PlantUMLCodeGeneratorGUI
 
             segments.Add(classContent.Substring(lastIndexChecked, classContent.Length - lastIndexChecked - 1).Trim());
 
-            return segments.Where(i => i.Length > 0).ToList();
+            var correctedSegments = new List<string>();
+            var concatenatedSegment = "";
+
+            // This is a hack for the time being. Why we need this is described below
+            foreach (var segment in segments)
+            {
+                concatenatedSegment += segment;
+
+                // Just checking whether we have captured inner classes partially, because inner classes
+                // themselves have public/private/protected sections
+                if (concatenatedSegment.Count(c => c == '{') != concatenatedSegment.Count(c => c == '}')) continue;
+
+                correctedSegments.Add(concatenatedSegment);
+                concatenatedSegment = "";
+            }
+
+            return correctedSegments.Where(i => i.Length > 0).ToList();
         }
 
         public void Set(string classContent)
@@ -139,6 +155,14 @@ namespace PlantUMLCodeGeneratorGUI
                     scopeData.Add(scopeName, "");
 
                 scopeData[scopeName] += Environment.NewLine + segment.Substring(matchingScopes.Any() ? (segment.IndexOf(":", StringComparison.Ordinal) + 1) : 0);
+            }
+
+            foreach (var key in scopeData.Keys.ToArray())
+            {
+                var identifiedClasses = new List<Class>();
+                scopeData[key] = IdentifyInnerClasses(scopeData[key], ref identifiedClasses);
+
+                scopes.First(i => i.Name == key).NestedClasses.AddRange(identifiedClasses);
             }
 
             foreach (var scope in scopes)
@@ -168,7 +192,7 @@ namespace PlantUMLCodeGeneratorGUI
                         var scopedContent = Processor.GetScopedContent(scopeContent, ref offset);
                         visitedIndex = offset;
 
-                        if (methodContent.StartsWith("struct"))
+                        if (methodContent.StartsWith("struct") || methodContent.StartsWith("union"))
                         {
                             var indexOfInnerSemiColon = scopeContent.IndexOf(";", visitedIndex, StringComparison.Ordinal) + 1;
                             
@@ -245,41 +269,64 @@ namespace PlantUMLCodeGeneratorGUI
                         if (indexOfAssignment != -1) // Most likely someone is initializing this variable.
                             nextToVisitIndex = indexOfSemiColon;
 
-                        if (nextToVisitIndex == indexOfSemiColon) // This is definitely a variable
+                        if (nextToVisitIndex == indexOfSemiColon) // This is very likely a variable
                         {
                             try
                             {
                                 var memberContent = methodContent.Trim();
                                 if (memberContent.Length == 0) continue;
 
-                                if (memberContent.StartsWith("friend class") || memberContent.StartsWith("typedef")) continue;
+                                var ignorablePrefixes = new [] { "friend class ", "typedef ", "using " };
+                                if (ignorablePrefixes.Any(i => memberContent.StartsWith(i))) continue;
 
-                                memberContent = memberContent.Split('=').First().Trim();
-                                var indexOfLastSpace = memberContent.LastIndexOf(" ", StringComparison.Ordinal);
-                                var memberType = memberContent.Substring(0, indexOfLastSpace).Trim();
-                                var memberName = memberContent.Substring(indexOfLastSpace + 1).Trim();
+                                // In c++ we can define/declare/initialize variable like this
+                                //
+                                // int a;
+                                // int a, b, c;
+                                // int a = 10, b = 20, c = 30;
+                                // int a = 10, b, c = 30;
+                                // int a{10}, b{20}, c{30};
+                                // int a(10), b(20), c(30);
+                                // int a = {}, b = {}, c = {};
+                                // auto a = 10, b = 20, c = 30;
+                                // int a[] = {1, 2, 3};
+                                // 
+                                // We don't care about the values, just about the type and the variable names
 
-                                var regexArray = new Regex("(\\[\\d+\\])+$");
-                                var match = regexArray.Match(memberName);
+                                var indexOfFirstSpace = memberContent.IndexOf(" ", StringComparison.Ordinal);
+                                var memberType = memberContent.Substring(0, indexOfFirstSpace).Trim();
 
-                                if (match.Success)
+                                memberContent = memberContent.Substring(indexOfFirstSpace + 1).Trim();
+
+                                var memberContentSegments = memberContent.Split(',');
+                                foreach (var memberContentSegment in memberContentSegments)
                                 {
-                                    memberName = memberName.Substring(0, match.Index).Trim();
+                                    var memberName = memberContentSegment.Split('=').First().Trim();
+                                    var regexArray = new Regex("(\\[[0-9a-zA-Z_]*\\])+$");
+                                    var match = regexArray.Match(memberName);
 
-                                    var regexArraySegment = new Regex("\\][ \t]*\\[");
-                                    var arrayLengths = regexArraySegment.Replace(match.Value, ";").Replace("[", "").Replace("]", "").Split(';').Select(i => int.Parse(i.Trim())).ToArray();
+                                    if (match.Success)
+                                    {
+                                        memberName = memberName.Substring(0, match.Index).Trim();
 
-                                    scope.Members.Add(new ArrayMember { Name = memberName, Type = memberType, OwnerClass = this, ArrayLengths = arrayLengths });
-                                }
-                                else
-                                {
-                                    scope.Members.Add(new Member { Name = memberName, Type = memberType, OwnerClass = this });
+                                        var regexArraySegment = new Regex("\\][ \t]*\\[");
+                                        var arrayLengths = regexArraySegment.Replace(match.Value, ";").Replace("[", "").Replace("]", "").Split(';').Select(i => i.Trim()).ToArray();
+
+                                        scope.Members.Add(new ArrayMember { Name = memberName, Type = memberType, OwnerClass = this, ArrayLengths = arrayLengths });
+                                    }
+                                    else
+                                    {
+                                        scope.Members.Add(new Member { Name = memberName, Type = memberType, OwnerClass = this });
+                                    }
                                 }
 
                                 nextToVisitIndex = indexOfSemiColon;
                                 if (indexOfAssignment != -1) visitedIndex = nextToVisitIndex + 1;
                             }
-                            catch { }
+                            catch
+                            {
+                                // ignored
+                            }
                         }
                     }
                 }
@@ -354,9 +401,140 @@ namespace PlantUMLCodeGeneratorGUI
 
                     classRelationshipsContent += Name + " \"1\" -- \"" + referredType.Count() + "\" " + referredType.Key.Name + Environment.NewLine;
                 }
+
+                foreach (var nestedClass in scope.NestedClasses)
+                {
+                    classRelationshipsContent += Name + " +-- " + nestedClass.Name + " : [ " + scope.Name + " ] Inner Class";
+                }
             }
 
             return new StringifiedContent(classContent.Trim(), classRelationshipsContent.Trim());
+        }
+
+        private string IdentifyInnerClasses(string content, ref List<Class> innerClasses)
+        {
+            var remainingContent = "";
+            var offset = 0;
+
+            var classMatches = RegExs.classMatch.Matches(content);
+            var previouslyCheckedSegments = new List<Segment>();
+            
+            foreach (Match classMatch in classMatches)
+            {
+                if (classMatch.Index < offset) continue;
+
+                // This means this class match is inside another class
+                if (previouslyCheckedSegments.Any(i => Utilities.IsInnerMatch(i, classMatch))) continue;
+
+                remainingContent += content.Substring(offset, classMatch.Index - offset);
+
+                var classEndOffset = classMatch.Index;
+                var classContent = Processor.GetScopedContent(content, ref classEndOffset);
+                var classObj = Class.GetClass(this.ParentNamespace, classMatch.Groups[5].Value);
+
+                innerClasses.Add(classObj);
+
+                // This is where our class potentially ends
+                offset = classEndOffset;
+
+                // We don't want the inner classes to be processed again
+                previouslyCheckedSegments.Add(new Segment(classMatch.Index, classMatch.Index - classEndOffset));
+
+                if (string.IsNullOrWhiteSpace(classContent) == false) classObj.Set(classContent);
+
+                // Checking whether this class inherits others
+                var parentStr = classMatch.Groups[8].Value;
+                if (string.IsNullOrEmpty(parentStr)) continue;
+
+                parentStr = parentStr.Replace("::", "[--]").Replace(":", "").Replace("[--]", "::").Replace("{", "").Trim();
+
+                var parentNames = GetParents(parentStr);
+                foreach (var parent in parentNames)
+                {
+                    var isPrivate = false;
+                    var isPublic = false;
+
+                    if (parent.Contains("private ")) isPrivate = true;
+                    else if (parent.Contains("public ")) isPublic = true;
+                    else if (parent.Contains("protected ") == false) isPrivate = true;
+
+                    var parentName = parent.Replace("private", "").Replace("public", "").Replace("protected", "").Trim().Replace(" ", "").Replace("\t", "");
+
+                    var indexOfColon = parentName.IndexOf("::", StringComparison.Ordinal);
+                    var indexOfTemplateStart = parentName.IndexOf("<", StringComparison.Ordinal);
+
+                    // Checking whether this is a situation similar to 'namespace::ClassName<OtherClassName>'
+                    // and not this 'ClassName<namespace::OtherClassName>' and shortening this logic would
+                    // drastically reduce readability
+                    var hasNamespace = false;
+                    if (indexOfColon != -1)
+                        if (indexOfTemplateStart != -1)
+                            hasNamespace = (indexOfColon < indexOfTemplateStart);
+                        else
+                            hasNamespace = true;
+
+                    var parentClassObj = hasNamespace ? Class.GetClass(parentName) : Class.GetClass(this.ParentNamespace, parentName);
+                    (isPrivate ? classObj.PrivateScope : (isPublic ? classObj.PublicScope : classObj.ProtectedScope)).Parents.Add(parentClassObj);
+                }
+            }
+
+            remainingContent += content.Substring(offset);
+            return remainingContent;
+        }
+
+        public static string ProcessScopedContent(Namespace parentNamespace, string fullContent)
+        {
+            var remainingContent = "";
+            var offset = 0;
+
+            var classMatches = RegExs.classMatch.Matches(fullContent);
+            var previouslyCheckedSegments = new List<Segment>();
+
+            foreach (Match classMatch in classMatches)
+            {
+                if (classMatch.Index < offset) continue;
+
+                // This means this class match is inside another class
+                if (previouslyCheckedSegments.Any(i => Utilities.IsInnerMatch(i, classMatch))) continue;
+
+                remainingContent += fullContent.Substring(offset, classMatch.Index - offset);
+
+                var matchOffset = classMatch.Index;
+                var classContent = Processor.GetScopedContent(fullContent, ref matchOffset);
+                var classObj = Class.GetClass(parentNamespace, classMatch.Groups[5].Value);
+
+                // This is where our class potentially ends
+                offset = matchOffset;
+                classObj.Set(classContent);
+                previouslyCheckedSegments.Add(new Segment(classMatch.Index, classMatch.Index - offset));
+            }
+
+            remainingContent += fullContent.Substring(offset);
+            return remainingContent;
+        }
+
+        private static string[] GetParents(string parentString)
+        {
+            var regexMultipleSpaces = new Regex("[ \t]+");
+            parentString = regexMultipleSpaces.Replace(parentString.Trim().Replace("\r", "").Replace("\n", ""), " ");
+
+            var modifiedParentString = "";
+            var lastVisitedIndex = 0;
+            var matches = RegExs.templateTypes.Matches(parentString).OfType<Match>().ToArray();
+
+            foreach (var match in matches)
+            {
+                modifiedParentString += parentString.Substring(lastVisitedIndex, match.Index - lastVisitedIndex);
+                modifiedParentString += match.Value.Replace(",", "[COMMA]");
+                lastVisitedIndex = (match.Index + match.Length);
+            }
+
+            if (lastVisitedIndex < parentString.Length - 1)
+            {
+                modifiedParentString += parentString.Substring(lastVisitedIndex, parentString.Length - lastVisitedIndex);
+            }
+
+            return modifiedParentString.Split(',').Select(i => i.Trim().Replace("[COMMA]", ", ")).ToArray();
         }
     }
 

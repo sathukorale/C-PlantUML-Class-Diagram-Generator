@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
+using PlantUMLCodeGeneratorGUI.classes.UI;
 
 namespace PlantUMLCodeGeneratorGUI
 {
@@ -13,23 +14,22 @@ namespace PlantUMLCodeGeneratorGUI
         public frmMain()
         {
             InitializeComponent();
+            lstFolderList.Items.Add("Z:\\workspace\\sample-c-code");
+            btnGenerate.Enabled = true;
         }
 
         private void btnAddFolder_Click(object sender, EventArgs e)
         {
-            using (var fbd = new FolderBrowserDialog())
+            var prompt = "Please select the folder which contains the header files";
+            var directory = _lastVisitedDirectory ?? Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+            var selectedPath = FolderBrowser.ShowDialog(prompt, directory);
+
+            if (selectedPath != null && lstFolderList.Items.Cast<string>().Any(i => i == selectedPath) == false)
             {
-                fbd.SelectedPath = _lastVisitedDirectory ?? Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-                fbd.SelectedPath = @"D:\documents\marketdata\include";
-                fbd.Description = "Please select the folder which contains the header files";
+                lstFolderList.Items.Add(selectedPath);
+                _lastVisitedDirectory = selectedPath;
 
-                if (fbd.ShowDialog() == DialogResult.OK && (lstFolderList.Items.Cast<string>().Any(i => i == fbd.SelectedPath) == false))
-                {
-                    lstFolderList.Items.Add(fbd.SelectedPath);
-                    _lastVisitedDirectory = fbd.SelectedPath;
-
-                    btnGenerate.Enabled = true;
-                }
+                btnGenerate.Enabled = true;
             }
         }
 
@@ -56,6 +56,8 @@ namespace PlantUMLCodeGeneratorGUI
         {
             var objResult = frmLoadingDialog.ShowWindow(o =>
             {
+                Namespace.ResetDefaultNamespace();
+
                 var headerFiles = lstFolderList.Items.Cast<string>().Select(i => Directory.GetFiles(i, "*.h", SearchOption.AllDirectories)).SelectMany(i => i);
 
                 var completeContent = "";

@@ -2,7 +2,7 @@
 
 namespace PlantUMLCodeGeneratorGUI
 {
-    internal class KnownBugCapturedException : Exception
+    class KnownBugCapturedException : Exception
     {
         public readonly int BugId;
         public KnownBugCapturedException(int bugId, string explanation = "") : base(explanation)
