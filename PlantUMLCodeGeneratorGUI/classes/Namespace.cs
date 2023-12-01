@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using PlantUMLCodeGeneratorGUI.classes.utils;
 
 namespace PlantUMLCodeGeneratorGUI
 {
@@ -72,92 +73,8 @@ namespace PlantUMLCodeGeneratorGUI
             }
 
             remainingContent += namespaceContent.Substring(lastMatchOffset, namespaceContent.Length - lastMatchOffset);
-
-            remainingContent = ProcessFullContent(remainingContent);
-        }
-
-        private string ProcessFullContent(string fullContent)
-        {
-            var remainingContent = "";
-            var offset = 0;
-
-            var classMatches = RegExs.classMatch.Matches(fullContent);
-            foreach (Match classMatch in classMatches)
-            {
-                if (classMatch.Index < offset) continue;
-
-                remainingContent += fullContent.Substring(offset, classMatch.Index - offset);
-
-                var matchOffset  = classMatch.Index;
-                var classContent = Processor.GetScopedContent(fullContent, ref matchOffset);
-                var classObj     = Class.GetClass(this, classMatch.Groups[5].Value);
-
-                offset       = matchOffset;
-                classContent = ProcessFullContent(classContent);
-
-                if (string.IsNullOrWhiteSpace(classContent) == false) classObj.Set(classContent);
-
-                var parentStr = classMatch.Groups[8].Value;
-                if (string.IsNullOrEmpty(parentStr)) continue;
-
-                parentStr = parentStr.Replace("::", "[--]").Replace(":", "").Replace("[--]", "::").Replace("{", "").Trim();
-
-                var parentNames = GetParents(parentStr);
-                foreach (var parent in parentNames)
-                {
-                    bool isPrivate = false;
-                    bool isPublic = false;
-
-                    if (parent.Contains("private ")) isPrivate = true;
-                    else if (parent.Contains("public ")) isPublic = true;
-                    else if (parent.Contains("protected ") == false) isPrivate = true;
-
-                    var parentName = parent.Replace("private", "").Replace("public", "").Replace("protected", "").Trim().Replace(" ", "").Replace("\t", "");
-
-                    var indexOfColon = parentName.IndexOf("::", StringComparison.Ordinal);
-                    var indexOfTemplateStart = parentName.IndexOf("<", StringComparison.Ordinal);
-
-                    // Checking whether this is a situation similar to 'namespace::ClassName<OtherClassName>'
-                    // and not this 'ClassName<namespace::OtherClassName>' and shortening this logic would
-                    // drastically reduce readability
-                    var hasNamespace = false;
-                    if (indexOfColon != -1)
-                        if (indexOfTemplateStart != -1)
-                            hasNamespace = (indexOfColon < indexOfTemplateStart);
-                        else
-                            hasNamespace = true;
-
-                    var parentClassObj = hasNamespace ? Class.GetClass(parentName) : Class.GetClass(this, parentName);
-                    (isPrivate ? classObj.PrivateScope : (isPublic ? classObj.PublicScope : classObj.ProtectedScope)).Parents.Add(parentClassObj);
-                }
-            }
-
-            remainingContent += fullContent.Substring(offset);
-            return remainingContent;
-        }
-
-        private string[] GetParents(string parentString)
-        {
-            var regexMultipleSpaces = new Regex("[ \t]+");
-            parentString = regexMultipleSpaces.Replace(parentString.Trim().Replace("\r", "").Replace("\n", ""), " ");
-
-            var modifiedParentString = "";
-            var lastVisitedIndex = 0;
-            var matches = RegExs.templateTypes.Matches(parentString).OfType<Match>().ToArray();
-
-            foreach (var match in matches)
-            {
-                modifiedParentString += parentString.Substring(lastVisitedIndex, match.Index - lastVisitedIndex);
-                modifiedParentString += match.Value.Replace(",", "[COMMA]");
-                lastVisitedIndex = (match.Index + match.Length);
-            }
-
-            if (lastVisitedIndex < parentString.Length - 1)
-            {
-                modifiedParentString += parentString.Substring(lastVisitedIndex, parentString.Length - lastVisitedIndex);
-            }
-
-            return modifiedParentString.Split(',').Select(i => i.Trim().Replace("[COMMA]", ", ")).ToArray();
+            
+            remainingContent = Class.ProcessScopedContent(this, remainingContent);
         }
 
         public StringifiedContent ToString(Settings settings)

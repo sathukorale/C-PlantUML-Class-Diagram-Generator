@@ -1,5 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
+using PlantUMLCodeGeneratorGUI.classes.utils;
 
 namespace PlantUMLCodeGeneratorGUI
 {
@@ -41,6 +43,12 @@ namespace PlantUMLCodeGeneratorGUI
         {
             var isContainerType = (type.StartsWith("std::list") || type.StartsWith("std::vector") || type.StartsWith("std::set") || type.StartsWith("std::queue") || type.StartsWith("std::dequeque"));
             return isContainerType;
+        }
+
+        public static bool IsInnerMatch(Segment parentMatch, Match innerMatch)
+        {
+            return parentMatch.Offset < innerMatch.Index &&
+                   (parentMatch.Offset + parentMatch.Length) > (innerMatch.Index + innerMatch.Length);
         }
     }
 }
