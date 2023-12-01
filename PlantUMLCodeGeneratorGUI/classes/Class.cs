@@ -276,7 +276,7 @@ namespace PlantUMLCodeGeneratorGUI
                                 var memberContent = methodContent.Trim();
                                 if (memberContent.Length == 0) continue;
 
-                                var ignorablePrefixes = new [] { "friend class ", "typedef ", "using " };
+                                var ignorablePrefixes = new [] { "friend class ", "typedef ", "using ", "struct ", "class ", "union " /* forward declarations */ };
                                 if (ignorablePrefixes.Any(i => memberContent.StartsWith(i))) continue;
 
                                 // In c++ we can define/declare/initialize variable like this
