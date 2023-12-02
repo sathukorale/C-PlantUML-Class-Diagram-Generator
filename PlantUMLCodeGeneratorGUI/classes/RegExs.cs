@@ -9,5 +9,7 @@ namespace PlantUMLCodeGeneratorGUI
         public static Regex methodMatch = new Regex(@"(([ \t]+)([a-zA-Z0-9_:,<>\*]+))+([ \t]*\()((([ \t]*)(([a-zA-Z0-9_:]+[&*]?[ \t]+[a-zA-Z0-9_]+)(,[ \t]*[a-zA-Z0-9_:]+[&*]?[ \t]+[a-zA-Z0-9_]+))|)(\)[ \t\r\n]*([{;=]|override|const)))");
         public static Regex multiSpaces = new Regex("[ ]{2,}", RegexOptions.None);
         public static Regex templateTypes = new Regex(@"(<)([a-zA-Z0-9_:\* ,]+)(>)");
+        public static Regex bitFieldDeclaration = new Regex("[ \t]*:[ \t]*\\d+[ \t]*;?$");
+        public static Regex regexArrayField = new Regex("([ \t]*\\[[ \t]*[0-9a-zA-Z_]*[ \t]*\\][ \t]*)+$");
     }
 }
