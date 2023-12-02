@@ -1,6 +1,6 @@
 ﻿using System.Text.RegularExpressions;
 
-namespace PlantUMLCodeGeneratorGUI
+namespace PlantUMLCodeGeneratorGUI.classes
 {
     static class RegExs
     { 

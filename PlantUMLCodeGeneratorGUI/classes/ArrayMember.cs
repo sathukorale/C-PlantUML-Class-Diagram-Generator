@@ -1,6 +1,6 @@
 ﻿using System.Linq;
 
-namespace PlantUMLCodeGeneratorGUI
+namespace PlantUMLCodeGeneratorGUI.classes
 {
     class ArrayMember : Member
     {

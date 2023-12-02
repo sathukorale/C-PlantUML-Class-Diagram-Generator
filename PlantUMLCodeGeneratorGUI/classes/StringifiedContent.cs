@@ -1,4 +1,4 @@
-﻿namespace PlantUMLCodeGeneratorGUI
+﻿namespace PlantUMLCodeGeneratorGUI.classes
 {
     class StringifiedContent
     {
