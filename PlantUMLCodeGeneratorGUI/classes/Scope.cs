@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace PlantUMLCodeGeneratorGUI
+namespace PlantUMLCodeGeneratorGUI.classes
 {
     class Scope
     {

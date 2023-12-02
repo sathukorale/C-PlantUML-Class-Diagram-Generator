@@ -2,7 +2,7 @@
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace PlantUMLCodeGeneratorGUI.classes.UI
+namespace PlantUMLCodeGeneratorGUI.classes.ui
 {
     public class FolderBrowser
     {

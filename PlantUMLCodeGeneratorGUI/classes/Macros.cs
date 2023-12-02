@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace PlantUMLCodeGeneratorGUI
+namespace PlantUMLCodeGeneratorGUI.classes
 {
     static class Macros
     {

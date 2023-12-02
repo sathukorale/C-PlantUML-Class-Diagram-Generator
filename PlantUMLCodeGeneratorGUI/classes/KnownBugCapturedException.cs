@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace PlantUMLCodeGeneratorGUI
+namespace PlantUMLCodeGeneratorGUI.classes
 {
     class KnownBugCapturedException : Exception
     {
