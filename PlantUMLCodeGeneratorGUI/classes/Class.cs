@@ -292,18 +292,51 @@ namespace PlantUMLCodeGeneratorGUI
                                 // int a[] = {1, 2, 3};
                                 // 
                                 // We don't care about the values, just about the type and the variable names
+                                //
+                                // Including the above situation we can have members like this
+                                // int a = 10;
+                                // int a[3];
+                                // int a[] = {1, 2, 3};
+                                // int a[2][2];
+                                // Something a;
+                                // Something a[];
+                                // Something<int> a;
+                                // Something <int> a;
+                                // long long a; // There can even be type modified like this for certain types
+                                // unsigned long long a;
+                                // 
+                                // So we are going to lookup the first , after the >, so that we will get the first
+                                // member in a series of member declarations like "Something a, b, c" or Something<int> a, b, c
+                                // and from out of that we are going to remove the array part if any. So for ex:
+                                // Something<int> a[1][2], b, c => Something<int> a; Then its the item after the last space, which
+                                // is the member name, everything before this is the member type
 
-                                var indexOfFirstSpace = memberContent.IndexOf(" ", StringComparison.Ordinal);
-                                var memberType = memberContent.Substring(0, indexOfFirstSpace).Trim();
+                                var indexOfLastTemplateEnd = Math.Max(0, memberContent.IndexOf(">", StringComparison.Ordinal));
+                                var indexOfFirstComma = memberContent.IndexOf(",", indexOfLastTemplateEnd, StringComparison.Ordinal);
+                                if (indexOfFirstComma == -1) indexOfFirstComma = memberContent.Length;
 
-                                memberContent = memberContent.Substring(indexOfFirstSpace + 1).Trim();
+                                var firstMember = memberContent.Substring(0, indexOfFirstComma).Trim();
+                                var indexOfFirstEqSign = firstMember.LastIndexOf("=", StringComparison.Ordinal);
+                                if (indexOfFirstEqSign == -1) indexOfFirstEqSign = firstMember.Length;
+
+                                firstMember = firstMember.Substring(0, indexOfFirstEqSign).Trim();
+                                firstMember = RegExs.bitFieldDeclaration.Replace(firstMember, "");
+
+                                var indexOfLastSpace = firstMember.LastIndexOf(" ", StringComparison.Ordinal);
+                                var memberType = memberContent.Substring(0, indexOfLastSpace).Trim();
+                                memberContent = firstMember.Substring(indexOfLastSpace + 1).Trim();
 
                                 var memberContentSegments = memberContent.Split(',');
                                 foreach (var memberContentSegment in memberContentSegments)
                                 {
-                                    var memberName = memberContentSegment.Split('=').First().Trim();
-                                    var regexArray = new Regex("(\\[[0-9a-zA-Z_]*\\])+$");
-                                    var match = regexArray.Match(memberName);
+                                    // We are removing the : \d+; in bit fields
+                                    var modifiedMemberContentSegment = RegExs.bitFieldDeclaration.Replace(memberContentSegment, "");
+                                    var memberName = modifiedMemberContentSegment.Split('=').First().Trim();
+                                    var match = RegExs.regexArrayField.Match(memberName);
+
+                                    // So there can be variables/members in situations like bit fields where we
+                                    // don't have to mention variable/member names. We are going to ignore these fields
+                                    if (memberName.Length == 0) continue;
 
                                     if (match.Success)
                                     {
