@@ -15,7 +15,6 @@ namespace PlantUMLCodeGeneratorGUI
         public frmMain()
         {
             InitializeComponent();
-            lstFolderList.Items.Add("Z:\\workspace\\sample-c-code");
             btnGenerate.Enabled = true;
         }
 

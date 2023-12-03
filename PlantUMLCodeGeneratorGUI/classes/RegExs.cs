@@ -12,5 +12,7 @@ namespace PlantUMLCodeGeneratorGUI.classes
         public static Regex bitFieldDeclaration = new Regex("[ \t]*:[ \t]*\\d+[ \t]*;?$");
         public static Regex regexArrayField = new Regex("([ \t]*\\[[ \t]*[0-9a-zA-Z_]*[ \t]*\\][ \t]*)+$");
         public static Regex regexTemplateStart = new Regex("^template[ \t]*<.*");
+        public static Regex typedefStructMatch = new Regex(@"([ \t]*)(typedef)([ \t]+)(class|struct|union)([ \t\r\n]*{)");
+        public static Regex validClassName = new Regex(@"^[a-zA-Z_][a-zA-Z0-9_]+");
     }
 }
