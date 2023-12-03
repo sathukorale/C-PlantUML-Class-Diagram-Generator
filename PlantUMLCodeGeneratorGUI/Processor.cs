@@ -180,6 +180,9 @@ namespace PlantUMLCodeGeneratorGUI
                     currentType = containedTypeStr.Substring(0, indexOfAngleBracket);
                 }
 
+                // This kind of thing is going to be too complex to process
+                if (currentType.StartsWith("typename ")) continue;
+
                 var foundType = GetTypeAsClass(currentType, ownerClass, false);
                 if (foundType != null)
                 {

@@ -97,6 +97,8 @@ namespace PlantUMLCodeGeneratorGUI.classes
         private List<string> GetScopedSegments(string classContent, Scope[] scopes)
         {
             var segments = new List<string>();
+            if (classContent.Trim().Length == 0) return segments;
+
             var lastIndexChecked = 0;
 
             while (true)
@@ -439,7 +441,7 @@ namespace PlantUMLCodeGeneratorGUI.classes
 
                 foreach (var nestedClass in scope.NestedClasses)
                 {
-                    classRelationshipsContent += Name + " +-- " + nestedClass.Name + " : [ " + scope.Name + " ] Inner Class";
+                    classRelationshipsContent += Name + " +-- " + nestedClass.Name + " : [ " + scope.Name + " ] Inner Class" + Environment.NewLine;
                 }
             }
 
@@ -448,12 +450,32 @@ namespace PlantUMLCodeGeneratorGUI.classes
 
         private string IdentifyInnerClasses(string content, ref List<Class> innerClasses)
         {
+            // types can be defined in this manner as well
+            // typedef struct {
+            // ...
+            // } Something1;
+            // And this applies to classes and unions too
+            var classMatches = RegExs.classMatch.Matches(content).OfType<Match>().ToList();
+            var typedefStructMatches = RegExs.typedefStructMatch.Matches(content).OfType<Match>().ToList();
+
+            var all = classMatches.ToList();
+            all.AddRange(typedefStructMatches);
+
+            all = all.OrderBy(i => i.Index).ToList();
+
+            return IdentifyInnerClasses(content, all, (string fullContent, Match match, ref int classScopeEndIndex) =>
+            {
+                if (classMatches.Contains(match))
+                    return GetClassNameFromClassMatch(fullContent, match, ref classScopeEndIndex);
+                return GetClassNameFromTypeDefStructMatches(fullContent, match, ref classScopeEndIndex);
+            }, ref innerClasses);
+        }
+
+        private string IdentifyInnerClasses(string content, List<Match> classMatches, ClassNameIdentifier classNameIdentifier, ref List<Class> innerClasses) {
             var remainingContent = "";
             var offset = 0;
-
-            var classMatches = RegExs.classMatch.Matches(content);
             var previouslyCheckedSegments = new List<Segment>();
-            
+
             foreach (Match classMatch in classMatches)
             {
                 if (classMatch.Index < offset) continue;
@@ -465,7 +487,8 @@ namespace PlantUMLCodeGeneratorGUI.classes
 
                 var classEndOffset = classMatch.Index;
                 var classContent = Processor.GetScopedContent(content, ref classEndOffset);
-                var classObj = Class.GetClass(this.ParentNamespace, classMatch.Groups[5].Value);
+                var className = classNameIdentifier(content, classMatch, ref classEndOffset);
+                var classObj = Class.GetClass(this.ParentNamespace, className);
 
                 innerClasses.Add(classObj);
 
@@ -476,6 +499,7 @@ namespace PlantUMLCodeGeneratorGUI.classes
                 previouslyCheckedSegments.Add(new Segment(classMatch.Index, classMatch.Index - classEndOffset));
 
                 if (string.IsNullOrWhiteSpace(classContent) == false) classObj.Set(classContent);
+                if (classMatch.Groups.Count < 8) continue;
 
                 // Checking whether this class inherits others
                 var parentStr = classMatch.Groups[8].Value;
@@ -519,33 +543,75 @@ namespace PlantUMLCodeGeneratorGUI.classes
 
         public static string ProcessScopedContent(Namespace parentNamespace, string fullContent)
         {
+            // types can be defined in this manner as well
+            // typedef struct {
+            // ...
+            // } Something1;
+            // And this applies to classes and unions too
+            var classMatches = RegExs.classMatch.Matches(fullContent).OfType<Match>().ToList();
+            var typedefStructMatches = RegExs.typedefStructMatch.Matches(fullContent).OfType<Match>().ToList();
+
+            var all = classMatches.ToList();
+            all.AddRange(typedefStructMatches);
+
+            all = all.OrderBy(i => i.Index).ToList();
+
+            return ProcessClassMatches(fullContent, all, parentNamespace, (string content, Match match, ref int classScopeEndIndex) =>
+            {
+                if (classMatches.Contains(match))
+                    return GetClassNameFromClassMatch(content, match, ref classScopeEndIndex);
+                return GetClassNameFromTypeDefStructMatches(content, match, ref classScopeEndIndex);
+            });
+        }
+
+        private delegate string ClassNameIdentifier(string fullContent, Match classMatch, ref int classScopeEndIndex);
+
+        private static string ProcessClassMatches(string fullContent, List<Match> classMatches, Namespace parentNamespace, ClassNameIdentifier classNameIdentifier)
+        {
             var remainingContent = "";
             var offset = 0;
-
-            var classMatches = RegExs.classMatch.Matches(fullContent);
             var previouslyCheckedSegments = new List<Segment>();
 
             foreach (Match classMatch in classMatches)
             {
                 if (classMatch.Index < offset) continue;
-
+                 
                 // This means this class match is inside another class
                 if (previouslyCheckedSegments.Any(i => Utilities.IsInnerMatch(i, classMatch))) continue;
+                previouslyCheckedSegments.Add(new Segment(classMatch.Index, classMatch.Index - offset));
 
                 remainingContent += fullContent.Substring(offset, classMatch.Index - offset);
 
                 var matchOffset = classMatch.Index;
                 var classContent = Processor.GetScopedContent(fullContent, ref matchOffset);
-                var classObj = Class.GetClass(parentNamespace, classMatch.Groups[5].Value);
+                var className = classNameIdentifier(fullContent, classMatch, ref matchOffset);
+                if (className != null)
+                {
+                    var classObj = Class.GetClass(parentNamespace, className);
+                    classObj.Set(classContent);
+                }
 
                 // This is where our class potentially ends
                 offset = matchOffset;
-                classObj.Set(classContent);
-                previouslyCheckedSegments.Add(new Segment(classMatch.Index, classMatch.Index - offset));
             }
 
             remainingContent += fullContent.Substring(offset);
             return remainingContent;
+        }
+
+        private static string GetClassNameFromTypeDefStructMatches(string fullContent, Match classMatch, ref int classScopeEndIndex)
+        {
+            var indexOfSemiColon = fullContent.IndexOf(";", classScopeEndIndex, StringComparison.InvariantCulture);
+            if (indexOfSemiColon < classScopeEndIndex) return null;
+
+            var className = fullContent.Substring(classScopeEndIndex, indexOfSemiColon - classScopeEndIndex).Trim();
+            classScopeEndIndex = indexOfSemiColon;
+            return (RegExs.validClassName.IsMatch(className)) ? className : null;
+        }
+
+        private static string GetClassNameFromClassMatch(string content, Match classMatch, ref int classScopeEndIndex)
+        {
+            return classMatch.Groups[5].Value;
         }
 
         private static string[] GetParents(string parentString)
