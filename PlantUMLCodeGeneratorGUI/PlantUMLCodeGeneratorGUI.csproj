@@ -50,6 +50,7 @@
   <ItemGroup>
     <Compile Include="classes\ArrayMember.cs" />
     <Compile Include="classes\Class.cs" />
+    <Compile Include="classes\Enum.cs" />
     <Compile Include="classes\RegExs.cs" />
     <Compile Include="classes\StringifiedContent.cs" />
     <Compile Include="classes\ui\FolderBrowser.cs" />

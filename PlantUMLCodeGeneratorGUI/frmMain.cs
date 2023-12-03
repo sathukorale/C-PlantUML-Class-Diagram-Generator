@@ -122,15 +122,15 @@ namespace PlantUMLCodeGeneratorGUI
             using (var sfd = new SaveFileDialog())
             {
                 sfd.OverwritePrompt = true;
-                sfd.Filter = "WSD File|*.wsd";
-                sfd.Title = "Save Generated PlantUML File";
+                sfd.Filter = @"WSD File|*.wsd";
+                sfd.Title = @"Save Generated PlantUML File";
                 if (sfd.ShowDialog() == DialogResult.OK)
                 {
                     if (File.Exists(sfd.FileName))
                         File.Delete(sfd.FileName);
 
                     File.WriteAllText(sfd.FileName, generatedContent);
-                    MessageBox.Show("The PlantUML script was generated and saved successfully !", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show(@"The PlantUML script was generated and saved successfully !", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
         }
