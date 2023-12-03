@@ -175,7 +175,7 @@ namespace PlantUMLCodeGeneratorGUI.classes
                 {
                     var indexOfCurlyBracket = scopeContent.IndexOf("{", visitedIndex + 1, StringComparison.Ordinal);
                     var indexOfSemiColon = scopeContent.IndexOf(";", visitedIndex + 1, StringComparison.Ordinal);
-                    var indexOfAssignment = scopeContent.IndexOf("=", visitedIndex + 1, StringComparison.Ordinal);
+                    var indexOfAssignment = scopeContent.LastIndexOf("=", visitedIndex + 1, StringComparison.Ordinal);
 
                     var orderedIndices = new[] {indexOfSemiColon, indexOfCurlyBracket}.Where(i => i != -1).ToArray();
                     if (orderedIndices.Any() == false) break;
@@ -268,12 +268,16 @@ namespace PlantUMLCodeGeneratorGUI.classes
                         if (indexOfAssignment != -1) // Most likely someone is initializing this variable.
                             nextToVisitIndex = indexOfSemiColon;
 
-                        if (nextToVisitIndex != indexOfSemiColon) continue; // This is very likely a variable
+                        if (nextToVisitIndex != indexOfSemiColon) continue;
+                        // This is very likely a variable
 
                         try
                         {
                             var memberContent = methodContent.Trim();
                             if (memberContent.Length == 0) continue;
+                            if (RegExs.regexTemplateStart.IsMatch(memberContent)) continue;
+                            // in situations like 
+                            // template < typename = typename std::enable_if< true >::type >
 
                             var ignorablePrefixes = new [] { "friend class ", "typedef ", "using ", "struct ", "class ", "union " /* forward declarations */ };
                             if (ignorablePrefixes.Any(i => memberContent.StartsWith(i))) continue;
@@ -567,9 +571,5 @@ namespace PlantUMLCodeGeneratorGUI.classes
 
             return modifiedParentString.Split(',').Select(i => i.Trim().Replace("[COMMA]", ", ")).ToArray();
         }
-    }
-
-    class Enum
-    {
     }
 }
