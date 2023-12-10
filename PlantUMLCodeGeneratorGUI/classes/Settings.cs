@@ -1,6 +1,6 @@
 ﻿namespace PlantUMLCodeGeneratorGUI.classes
 {
-    struct Settings
+    public struct Settings
     {
         public readonly bool IncludeOverridenMethods;
         public readonly bool IncludePrivateMethodsAndMembers;

@@ -3,7 +3,7 @@ using System.Linq;
 
 namespace PlantUMLCodeGeneratorGUI.classes
 {
-    class Method
+    public class Method
     {
         public bool IsConstructor { get; internal set; }
         public bool IsVirtual { get; internal set; }

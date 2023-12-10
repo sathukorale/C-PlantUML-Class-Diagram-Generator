@@ -6,7 +6,7 @@ using PlantUMLCodeGeneratorGUI.classes.utils;
 
 namespace PlantUMLCodeGeneratorGUI.classes
 {
-    class Class
+    public class Class
     {
         public Namespace ParentNamespace;
         public string Name { get; internal set; }
@@ -190,7 +190,7 @@ namespace PlantUMLCodeGeneratorGUI.classes
                     if (nextToVisitIndex == indexOfCurlyBracket)
                     {
                         var offset = indexOfCurlyBracket;
-                        var scopedContent = Processor.GetScopedContent(scopeContent, ref offset);
+                        var scopedContent = CodeProcessor.GetScopedContent(scopeContent, ref offset);
                         visitedIndex = offset;
 
                         if (methodContent.StartsWith("struct") || methodContent.StartsWith("union"))
@@ -305,6 +305,7 @@ namespace PlantUMLCodeGeneratorGUI.classes
                             // int a[2][2];
                             // Something a;
                             // Something a[];
+                            // Something a [];
                             // Something<int> a;
                             // Something <int> a;
                             // long long a; // There can even be type modified like this for certain types
@@ -323,11 +324,11 @@ namespace PlantUMLCodeGeneratorGUI.classes
                             var firstMember = memberContent.Substring(0, indexOfFirstComma).Trim();
                             var indexOfFirstEqSign = firstMember.LastIndexOf("=", StringComparison.Ordinal);
                             if (indexOfFirstEqSign == -1) indexOfFirstEqSign = firstMember.Length;
-
+                            
                             firstMember = firstMember.Substring(0, indexOfFirstEqSign).Trim();
                             firstMember = RegExs.bitFieldDeclaration.Replace(firstMember, "");
 
-                            var indexOfLastSpace = firstMember.LastIndexOf(" ", StringComparison.Ordinal);
+                            var indexOfLastSpace = RegExs.regexArrayField.Replace(firstMember, "").LastIndexOf(" ", StringComparison.Ordinal);
                             var memberType = firstMember.Substring(0, indexOfLastSpace).Trim();
                             memberContent = firstMember.Substring(indexOfLastSpace + 1).Trim();
 
@@ -411,7 +412,7 @@ namespace PlantUMLCodeGeneratorGUI.classes
                     if (scopeParent.Name.Contains("<"))
                     {
                         var containerParentType = GetClass(ParentNamespace, scopeParent.Name.Substring(0, scopeParent.Name.IndexOf("<", StringComparison.Ordinal)));
-                        var containedParentTypes = Processor.GetContainedTypes(scopeParent.Name, this);
+                        var containedParentTypes = CodeProcessor.GetContainedTypes(scopeParent.Name, this);
                         foreach (var parentType in containedParentTypes)
                         {
                             classRelationshipsContent += Name + " ..|> " + parentType.Name + Environment.NewLine;
@@ -486,7 +487,7 @@ namespace PlantUMLCodeGeneratorGUI.classes
                 remainingContent += content.Substring(offset, classMatch.Index - offset);
 
                 var classEndOffset = classMatch.Index;
-                var classContent = Processor.GetScopedContent(content, ref classEndOffset);
+                var classContent = CodeProcessor.GetScopedContent(content, ref classEndOffset);
                 var className = classNameIdentifier(content, classMatch, ref classEndOffset);
                 var classObj = Class.GetClass(this.ParentNamespace, className);
 
@@ -578,12 +579,11 @@ namespace PlantUMLCodeGeneratorGUI.classes
                  
                 // This means this class match is inside another class
                 if (previouslyCheckedSegments.Any(i => Utilities.IsInnerMatch(i, classMatch))) continue;
-                previouslyCheckedSegments.Add(new Segment(classMatch.Index, classMatch.Index - offset));
 
                 remainingContent += fullContent.Substring(offset, classMatch.Index - offset);
 
                 var matchOffset = classMatch.Index;
-                var classContent = Processor.GetScopedContent(fullContent, ref matchOffset);
+                var classContent = CodeProcessor.GetScopedContent(fullContent, ref matchOffset);
                 var className = classNameIdentifier(fullContent, classMatch, ref matchOffset);
                 if (className != null)
                 {
@@ -593,6 +593,7 @@ namespace PlantUMLCodeGeneratorGUI.classes
 
                 // This is where our class potentially ends
                 offset = matchOffset;
+                previouslyCheckedSegments.Add(new Segment(classMatch.Index,  offset - classMatch.Index));
             }
 
             remainingContent += fullContent.Substring(offset);
