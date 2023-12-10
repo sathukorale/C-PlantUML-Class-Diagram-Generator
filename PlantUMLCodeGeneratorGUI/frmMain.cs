@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using PlantUMLCodeGeneratorGUI.classes;
+using PlantUMLCodeGeneratorGUI.classes.exceptions;
 using PlantUMLCodeGeneratorGUI.classes.ui;
 
 namespace PlantUMLCodeGeneratorGUI
@@ -70,7 +71,7 @@ namespace PlantUMLCodeGeneratorGUI
                 try
                 {
                     Namespace defaultNamespace;
-                    var output = Processor.Process(completeContent, new Settings(chkShowOverriddenMembers.Checked, chkShowPrivateMembers.Checked, chkShowProtectedMembers.Checked), out defaultNamespace);
+                    var output = CodeProcessor.Process(completeContent, new Settings(chkShowOverriddenMembers.Checked, chkShowPrivateMembers.Checked, chkShowProtectedMembers.Checked), out defaultNamespace);
                     
                     var content = "";
                     content += "@startuml" + Environment.NewLine;

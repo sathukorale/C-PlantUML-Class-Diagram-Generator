@@ -5,7 +5,7 @@ using System.Text.RegularExpressions;
 
 namespace PlantUMLCodeGeneratorGUI.classes
 {
-    class Namespace
+    public class Namespace
     {
         public string Name;
         public Namespace ParentNamespace;
@@ -46,6 +46,12 @@ namespace PlantUMLCodeGeneratorGUI.classes
             ChildNamespaces.Add(childNamespace);
         }
 
+        // For semantics
+        public void Add(string namespaceContent)
+        {
+            Set(namespaceContent);
+        }
+
         public void Set(string namespaceContent)
         {
             frmLoadingDialog.UpdateProgressText("Processing Class : " + FullName);
@@ -61,14 +67,21 @@ namespace PlantUMLCodeGeneratorGUI.classes
 
                 remainingContent += namespaceContent.Substring(lastMatchOffset, match.Index - lastMatchOffset);
 
-                var innerNamespaceContent = Processor.GetScopedContent(namespaceContent, ref matchIndex);
+                var innerNamespaceContent = CodeProcessor.GetScopedContent(namespaceContent, ref matchIndex);
                 var namespaceName = match.Groups[3].Value;
                 lastMatchOffset = match.Index + match.Length + innerNamespaceContent.Length + 1;
 
-                var namespaceObj = namespaceName.Contains("::") ? GetNamespace(namespaceName) : GetNamespace(this, namespaceName);
-                namespaceObj.Set(innerNamespaceContent);
+                if (namespaceName.Trim().Length == 0)
+                {
+                    Add(innerNamespaceContent);
+                }
+                else
+                {
+                    var namespaceObj = namespaceName.Contains("::") ? GetNamespace(namespaceName) : GetNamespace(this, namespaceName);
+                    namespaceObj.Set(innerNamespaceContent);
 
-                if (Namespaces.ContainsKey(namespaceObj.Name) == false) Namespaces.Add(namespaceObj.Name, namespaceObj);
+                    if (Namespaces.ContainsKey(namespaceObj.Name) == false) Namespaces.Add(namespaceObj.Name, namespaceObj);
+                }
             }
 
             remainingContent += namespaceContent.Substring(lastMatchOffset, namespaceContent.Length - lastMatchOffset);

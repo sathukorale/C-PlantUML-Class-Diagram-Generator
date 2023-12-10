@@ -2,7 +2,7 @@
 
 namespace PlantUMLCodeGeneratorGUI.classes
 {
-    class Scope
+    public class Scope
     {
         public string Name;
         public readonly List<Class> Parents;

@@ -1,6 +1,6 @@
 ﻿namespace PlantUMLCodeGeneratorGUI.classes
 {
-    class Member
+    public class Member
     {
         public string Type { get; internal set; }
         public string Name { get; internal set; }
@@ -17,12 +17,12 @@
 
         public Class GetTypeAsClass()
         {
-            return _type ?? (_type = Processor.GetTypeAsClass(Type, OwnerClass));
+            return _type ?? (_type = CodeProcessor.GetTypeAsClass(Type, OwnerClass));
         }
 
         public Class[] GetContainedTypes()
         {
-            return _containedTypes ?? (_containedTypes = Processor.GetContainedTypes(Type, OwnerClass).ToArray());
+            return _containedTypes ?? (_containedTypes = CodeProcessor.GetContainedTypes(Type, OwnerClass).ToArray());
         }
     }
 }

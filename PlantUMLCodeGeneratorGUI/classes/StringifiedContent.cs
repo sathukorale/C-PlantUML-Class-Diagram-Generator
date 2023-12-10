@@ -1,6 +1,6 @@
 ﻿namespace PlantUMLCodeGeneratorGUI.classes
 {
-    class StringifiedContent
+    public class StringifiedContent
     {
         public readonly string ClassContent;
         public readonly string ClassConnectivityContent;
